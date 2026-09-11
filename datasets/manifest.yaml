@@ -18,4 +18,17 @@
 #   expected_depth: [ok, ok, ok, no, ok]
 #   notes: "coupure camera a 50 s"
 
-videos: []
+videos:
+  - id: squat_yt_fraser_155
+    url: https://www.youtube.com/watch?v=D4yV10dKbkk
+    movement: front_squat       # tire du thruster de l'Open 15.5 (7 min AMRAP thrusters + bar muscle-ups) ; la phase basse du thruster ressemble a un front squat, pas un squat pur
+    view: null                  # TODO: verifier la vue camera (profil / oblique) en regardant le clip
+    segments: []                # TODO: reperer les segments exploitables (camera fixe, profil, disque visible)
+    slowmo_factor: 1.0
+    camera_static: null         # TODO: confirmer, plan de competition, la camera peut bouger/zoomer
+    plate_visible: true
+    plate_diameter_mm: 450
+    load_kg: null
+    expected_reps: null         # TODO: compter a la main sur le(s) segment(s) retenu(s)
+    expected_depth: []
+    notes: "Mat Fraser, Open 15.5 (thrusters). Fichier local: data/raw/Mat Frasers CrossFit Open Workout 15.5  FRASER FILES.mp4. A valider avant usage: mouvement = thruster, pas un squat isole."
