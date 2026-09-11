@@ -1,0 +1,28 @@
+# Configuration par defaut de WODVision.
+# Toute valeur ici est surchargeable en ligne de commande.
+
+calibration:
+  plate_diameter_mm: 450.0
+  min_ellipse_ratio: 0.9
+
+signal:
+  resample_fps: 60.0
+  max_gap_frames: 5
+  butterworth_order: 4
+  butterworth_cutoff_hz: 6.0
+  min_keypoint_confidence: 0.3
+
+rep_segmentation:
+  peak_prominence_fraction: 0.5
+  min_rep_distance_s: 0.5
+
+squat:
+  depth_margin_px: 5.0
+  lockout_angle_deg: 165.0
+
+pose:
+  backend: rtmlib
+  mode: balanced
+
+tracking:
+  max_occlusion_frames: 15

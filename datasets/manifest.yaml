@@ -1,0 +1,21 @@
+# Manifeste des videos de test (YouTube + personnelles) et de leur verite terrain.
+# Usage strictement personnel de R&D : aucune video n'est committee, seule cette
+# description l'est.
+#
+# Format d'une entree :
+#
+# - id: squat_yt_001
+#   url: https://www.youtube.com/watch?v=XXXX
+#   movement: back_squat        # back_squat | front_squat
+#   view: side_right            # side_left | side_right | front | oblique
+#   segments: [[12.0, 48.5]]    # secondes, un ou plusieurs segments exploitables
+#   slowmo_factor: 1.0
+#   camera_static: true
+#   plate_visible: true
+#   plate_diameter_mm: 450
+#   load_kg: null
+#   expected_reps: 5            # verite terrain comptee a la main
+#   expected_depth: [ok, ok, ok, no, ok]
+#   notes: "coupure camera a 50 s"
+
+videos: []

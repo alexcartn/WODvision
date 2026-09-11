@@ -1,0 +1,49 @@
+[project]
+name = "wodvision"
+version = "0.1.0"
+description = "Analyse video de mouvements CrossFit (pose, barre, metriques par repetition)"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+dependencies = [
+  "av>=13.0",
+  "opencv-contrib-python>=4.10",
+  "rtmlib>=0.0.13",
+  "supervision>=0.24",
+  "numpy>=1.26",
+  "scipy>=1.13",
+  "pandas>=2.2",
+  "pyarrow>=17.0",
+  "typer>=0.12",
+  "pyyaml>=6.0",
+  "pydantic>=2.8",
+  "matplotlib>=3.9",
+  "yt-dlp>=2024.8.6",
+]
+
+[project.optional-dependencies]
+mediapipe = ["mediapipe>=0.10"]
+agpl = ["ultralytics>=8.2"]
+train = ["rfdetr>=1.0"]
+app = ["streamlit>=1.38"]
+dev = ["ruff>=0.6", "pytest>=8.3"]
+
+[project.scripts]
+wodvision = "wodvision.cli:app"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests", "scripts"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
