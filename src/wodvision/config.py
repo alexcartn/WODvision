@@ -120,6 +120,7 @@ class GhostConfig(BaseModel):
     arm_onset: float = 0.8  # fraction du drive ou les bras demarrent
     knee_break: float = 0.6  # fraction de la recuperation avant flexion des genoux
     leg_straight_fraction: float = 0.98  # jambes quasi tendues au finish
+    handle_finish_ratio: float = 0.6  # hauteur de poignee au finish : 0 = hanche, 1 = epaule
 
 
 class HostedConfig(BaseModel):

@@ -1,0 +1,16 @@
+{
+  "best": {
+    "stroke": 4,
+    "deviation": 0.09328405390130538,
+    "similar": false,
+    "catch_joint": "épaule",
+    "finish_joint": "poignet"
+  },
+  "worst": {
+    "stroke": 3,
+    "deviation": 0.1257839799461624,
+    "similar": false,
+    "catch_joint": "coude",
+    "finish_joint": "poignet"
+  }
+}

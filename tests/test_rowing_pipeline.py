@@ -150,3 +150,43 @@ def test_ghost_is_drawn_on_the_video_and_in_the_panel(tmp_path):
     video_part = np.abs(a - b)[:, : a.shape[1] - 460].mean()
     panel_part = np.abs(a - b)[:, a.shape[1] - 460 :].mean()
     assert video_part > 0.05 and panel_part > 0.05  # le fantome modifie la video et le panneau
+
+
+def test_highlights_images_and_slow_motion_clips(tmp_path):
+    import cv2
+
+    from wodvision.analysis.rowing.ghost import build_ghost
+    from wodvision.viz.rowing_highlights import render_highlights
+
+    params = RowerParams(duration_s=20.0, px_per_m=200.0, origin_px=(250.0, 420.0), noise_px=1.0,
+                         period_jitter=0.05, trunk_onset=0.2)
+    video = tmp_path / "v.mp4"
+    detector, pose, _ = make_scene(video, params)
+    cfg = Config()
+    trace = get_trace(video, cfg, cache_dir=tmp_path / "cache", detector=detector, pose=pose)
+    report = analyze_trace(trace, cfg)
+    hl = render_highlights(video, trace, report, build_ghost(report, cfg.ghost))
+    assert hl is not None
+    assert set(hl.images) == {"best_catch", "best_finish", "worst_catch", "worst_finish"}
+    for data in hl.images.values():
+        img = cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_COLOR)
+        assert img is not None and img.shape[1] == 640
+    assert hl.meta["worst"]["deviation"] >= hl.meta["best"]["deviation"]
+    (tmp_path / "worst.mp4").write_bytes(hl.clips["worst"])
+    info = probe(tmp_path / "worst.mp4")
+    stroke = report.stroke_events[hl.meta["worst"]["stroke"] - 1]
+    expected = (stroke.t_next_catch - stroke.t_catch + 0.6) * 4  # ralenti x4
+    assert info.duration_s == pytest.approx(expected, rel=0.25)
+
+
+def test_no_highlights_outside_profile_view(tmp_path):
+    from wodvision.analysis.rowing.ghost import build_ghost
+    from wodvision.viz.rowing_highlights import render_highlights
+
+    video = tmp_path / "v.mp4"
+    detector, pose, _ = make_scene(video, RowerParams(duration_s=15.0, px_per_m=200.0,
+                                                      origin_px=(250.0, 420.0), yaw_deg=50.0))
+    cfg = Config()
+    trace = get_trace(video, cfg, cache_dir=tmp_path / "cache", detector=detector, pose=pose)
+    report = analyze_trace(trace, cfg)
+    assert render_highlights(video, trace, report, build_ghost(report, cfg.ghost)) is None

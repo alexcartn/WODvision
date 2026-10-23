@@ -90,8 +90,13 @@ class GhostModel:
         self._hip_catch_s = self._knee_catch[0] + np.sqrt(max(a.thigh**2 - dh**2, 0.0))
         straight = cfg.leg_straight_fraction * (a.thigh + a.shin)
         self._hip_finish_s = max(np.sqrt(max(straight**2 - a.seat_h**2, 0.0)), self._hip_catch_s)
-        # Poignee a hauteur de genoux au catch, puis chaine horizontale.
-        self._handle_h = float(self._knee_catch[1])
+        # Chaine horizontale : la poignee ne depasse ni la hauteur des genoux au catch ni, au
+        # finish, la hauteur "sous les cotes" (handle_finish_ratio) : la reference respecte
+        # ainsi les regles appliquees au rameur (handle_drop, handle_high_finish).
+        lean_f = np.radians(cfg.lean_finish_deg)
+        shoulder_h_finish = a.seat_h + a.torso * np.cos(lean_f)
+        rib_h = a.seat_h + cfg.handle_finish_ratio * (shoulder_h_finish - a.seat_h)
+        self._handle_h = float(min(self._knee_catch[1], rib_h))
 
     def _progress(self, kind: str, x: float) -> tuple[float, float, float]:
         """(jambes, buste, bras) : 0 = catch, 1 = finish."""
@@ -146,3 +151,34 @@ def build_ghost(report, cfg: GhostConfig) -> GhostModel | None:
         return None
     anthro = estimate_anthropometry(report.series, report.frame)
     return GhostModel(anthro, cfg) if anthro is not None else None
+
+
+DEVIATION_JOINTS = ("knee", "hip", "shoulder", "wrist")
+
+
+def joint_gaps(report, ghost: GhostModel, t: float) -> dict[str, float] | None:
+    """Ecart (en longueurs de tronc) de chaque articulation au fantome a l'instant t."""
+    ph = phase_of(report.stroke_events, t)
+    if ph is None:
+        return None
+    series, frame = report.series, report.frame
+    i = int(np.argmin(np.abs(series.t_s - t)))
+    pose = ghost.pose(*ph)
+    out = {}
+    for name in ("knee", "hip", "shoulder", "elbow", "wrist"):
+        actual = frame.to_machine(series.pts[name][i])
+        out[name] = float(np.linalg.norm(actual - pose[name]) / ghost.a.torso)
+    return out
+
+
+def stroke_deviations(report, ghost: GhostModel) -> list[float]:
+    """Ecart moyen au fantome de chaque coup (en longueurs de tronc) : sert a choisir le
+    meilleur coup et le coup a ameliorer."""
+    series = report.series
+    out = []
+    for s in report.stroke_events:
+        sel = (series.t_s >= s.t_catch) & (series.t_s < s.t_next_catch)
+        gaps = [joint_gaps(report, ghost, float(t)) for t in series.t_s[sel]]
+        vals = [np.mean([g[j] for j in DEVIATION_JOINTS]) for g in gaps if g]
+        out.append(float(np.mean(vals)) if vals else float("nan"))
+    return out

@@ -92,6 +92,26 @@ panneau du squelette seul, avec l'écart de buste en direct (degrés, + = plus d
 - Disponible en analyse complète (vue de profil) seulement : en vue oblique ou de face, les angles sont déformés et
   une référence serait trompeuse. Désactivable : `--no-ghost` (CLI) ou la case de l'application.
 
+## 3 quater. Synthèse pour amateurs et coachs
+
+Deux niveaux d'affichage dans l'application (Débutant par défaut, Coach) ; la même analyse, deux lectures.
+
+- Contenu éditable : `configs/conseils.yaml` (critères, points forts, et pour chaque faute un titre simple, "pourquoi",
+  "ce que tu dois sentir", un exercice). Fichier de contenu à relire par un coach : les conseils sont une première
+  rédaction (consignes Concept2 et exercices classiques), marqués `a_valider`. Un test vérifie que chaque règle a son
+  conseil.
+- Moteur : `coaching.py`. Cinq critères (rythme, enchaînement, positions, tenue dans la durée, force PM5) avec un
+  statut vert / orange / rouge / non mesuré. Rouge seulement si une faute fiable touche au moins 60 % des coups ; un
+  constat indicatif (vue non profil) ne dépasse jamais l'orange. Pas de note globale : un score unique ferait croire
+  à une précision qu'on n'a pas. Un point fort, au plus deux priorités (trois en mode Coach), une par critère avant de
+  répéter un critère.
+- Images clés (`viz/rowing_highlights.py`) : en analyse complète, le meilleur coup et le coup à améliorer, choisis par
+  leur écart moyen au fantôme. Au catch et au finish : posture réelle (vert), référence (jaune), flèche vers
+  l'articulation qui s'écarte le plus ; plus un ralenti x4 de chaque coup. Si les deux coups sont presque identiques
+  (écart inférieur à 0,03 longueur de tronc), un seul est montré. Absent en vue non profil.
+- Cohérence : la posture de référence respecte les règles appliquées au rameur (test dédié), sinon elle serait
+  elle-même "en faute".
+
 ## 4. Limites assumées
 
 - Vue 2D : angles hors plan faussés. Le profil strict est la configuration de référence. Une vue oblique

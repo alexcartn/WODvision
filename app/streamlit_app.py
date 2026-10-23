@@ -21,7 +21,8 @@ import pandas as pd
 import streamlit as st
 
 from wodvision.analysis.rowing.ghost import build_ghost
-from wodvision.analysis.rowing.report import RowingReport
+from wodvision.analysis.rowing.report import MODE_LABELS, RowingReport
+from wodvision.coaching import load_coaching, summarize
 from wodvision.config import load_config
 from wodvision.io.cache import load_trace
 from wodvision.rowing_pipeline import (
@@ -32,6 +33,7 @@ from wodvision.rowing_pipeline import (
     new_run_dir,
 )
 from wodvision.viz.rowing_dashboard import render_dashboard
+from wodvision.viz.rowing_highlights import load_highlights, render_highlights
 
 logging.basicConfig(level=logging.INFO)
 ROOT = Path(__file__).resolve().parents[1]
@@ -41,8 +43,8 @@ HOSTED = os.environ.get("WODVISION_HOSTED") == "1"
 CFG_PATH = ROOT / "configs" / "hosted.yaml" if HOSTED else None
 
 DEMOS = {
-    "Profil, avec PM5 : dos precoce et chaine qui monte": "profil",
-    "Vue oblique : mode degrade": "oblique",
+    "Profil, avec PM5 : dos précoce et chaîne qui monte": "profil",
+    "Vue oblique : mode dégradé": "oblique",
 }
 
 st.set_page_config(page_title="WODVision Rameur", layout="wide")
@@ -65,6 +67,9 @@ def demo_result(name: str) -> dict:
     report = analyze_trace(trace, cfg, pm5=load_pm5(pm5_path) if pm5_path.exists() else None)
     result = pack_result(report, cfg, (DEMO_DIR / f"{name}.mp4").read_bytes())
     result["ghost"] = build_ghost(report, cfg.ghost) is not None
+    hl_dir = DEMO_DIR / f"{name}_highlights"
+    if hl_dir.exists():
+        result["highlights"] = load_highlights(hl_dir)
     return result
 
 
@@ -77,69 +82,148 @@ def pack_result(report: RowingReport, cfg, dash_bytes: bytes) -> dict:
     return {"report": report, "dash": dash_bytes, "csv": csv_bytes, "json": json_text}
 
 
-def show_result(res: dict, simulated: bool = False) -> None:
-    report: RowingReport = res["report"]
-    if simulated:
-        st.info("Donnees simulees (rameur filaire synthetique) : aucune personne reelle. "
-                "Le pipeline est le meme que pour tes videos.")
+STATUS_WORD = {"ok": "Bien", "warn": "À surveiller", "bad": "À corriger", "na": "Non mesuré"}
+
+
+@st.cache_resource
+def coaching_content():
+    return load_coaching(ROOT / "configs" / "conseils.yaml")
+
+
+def show_mode_banner(report: RowingReport, level: str) -> None:
     if report.mode == "full":
         st.success(report.mode_label)
-    else:
-        st.warning(f"Mode : {report.mode_label}")
-        with st.expander("Que signifie ce mode ?", expanded=True):
-            st.markdown(
-                "- Fiable : nombre de coups, cadence, duree du drive, ratio drive/recuperation, "
-                "regularite du rythme.\n"
-                "- Indicatif (marque ~) : sequence jambes / dos / bras, evolution de l'amplitude "
-                "de la poignee. Ces mesures sont relatives, donc moins sensibles a l'angle de "
-                "vue.\n"
-                "- Masque : angles et hauteurs absolus (tibias, recul du buste, hauteur de "
-                "poignee, alignement de la chaine), deformes quand la camera n'est pas "
-                "perpendiculaire au rail.\n"
-                "- Pour une analyse complete : camera fixe, perpendiculaire au rail, a hauteur "
-                "de hanche, rameur entier visible."
-            )
-    for w in report.warnings:
-        st.warning(w)
-    if res.get("ghost"):
-        st.caption("Mode fantome : le squelette jaune est la posture de reference (modele issu des "
-                   "consignes Concept2, hypotheses a calibrer), a la meme phase du coup.")
-    elif res.get("ghost_requested"):
-        st.info("Mode fantome indisponible : il faut une vue de profil (analyse complete).")
-    if report.camera_motion_px > 20:
-        st.caption(f"Mouvement de camera detecte (~{report.camera_motion_px:.0f} px) : compense.")
+        return
+    st.warning(f"Mode : {report.mode_label}")
+    with st.expander("Que signifie ce mode ?", expanded=(level == "Coach")):
+        st.markdown(
+            "- Fiable : nombre de coups, cadence, durée du drive, ratio drive/récupération, "
+            "régularité du rythme.\n"
+            "- Indicatif (marqué ~) : enchaînement jambes / dos / bras, évolution de l'amplitude "
+            "de la poignée. Ces mesures sont relatives, donc moins sensibles à l'angle de vue.\n"
+            "- Non mesuré : angles et hauteurs absolus (tibias, recul du buste, hauteur de "
+            "poignée, alignement de la chaîne), déformés quand la caméra n'est pas "
+            "perpendiculaire au rail.\n"
+            "- Pour une analyse complète : caméra fixe, perpendiculaire au rail, à hauteur "
+            "de hanche, rameur entier visible."
+        )
 
-    st.video(res["dash"])
 
-    c1, c2, c3, c4, c5 = st.columns(5)
-    c1.metric("Coups", report.n_strokes)
-    c2.metric("Cadence mediane", f"{report.stroke_rate_spm:.1f} c/min")
-    c3.metric("Duree du drive", f"{report.drive_time_s:.2f} s")
-    c4.metric("Recup / drive", f"{report.recovery_drive_ratio:.2f} : 1")
-    c5.metric("Regularite (CV)", f"{report.rate_cv_pct:.1f} %")
-
-    st.subheader("Constats de technique")
-    if not report.findings:
-        st.success("Aucune faute detectee avec les seuils actuels.")
-    for f in report.findings:
+def show_summary(report: RowingReport, level: str) -> None:
+    summary = summarize(report, coaching_content(), max_priorities=2 if level == "Débutant" else 3)
+    st.subheader("Ce qu'il faut retenir")
+    cols = st.columns(len(summary.criteria))
+    for col, c in zip(cols, summary.criteria, strict=True):
+        col.markdown(f"{c.emoji} {c.label}")
+        col.caption(STATUS_WORD[c.status] + (" (indicatif)" if c.indicative and c.status != "na"
+                                             else ""))
+        if level == "Coach":
+            col.caption(c.note)
+    if summary.strengths:
+        st.success("Point fort : " + summary.strengths[0])
+    if not summary.priorities and not any(c.status in {"warn", "bad"} for c in summary.criteria):
+        st.success("Rien à corriger en priorité avec les seuils actuels.")
+    for i, p in enumerate(summary.priorities, 1):
         with st.container(border=True):
-            st.markdown(f"{f.title}" + ("  (indicatif)" if f.reliability == "indicative" else ""))
-            st.write(f.advice)
-            st.caption(f"{f.metric} median = {f.median_value:.2f} (seuil {f.comparator} "
-                       f"{f.threshold:g}), {f.n_flagged}/{f.n_valid} coups concernes")
+            st.markdown(f"##### Priorité {i} : {p.tip.title}"
+                        + (" (indicatif)" if p.reliability == "indicative" else ""))
+            st.write(p.tip.why)
+            st.markdown(f"Ce que tu dois sentir : {p.tip.feeling}")
+            st.markdown(f"Exercice : {p.tip.drill}")
+            if level == "Coach":
+                st.caption(p.metric_line + (" ; conseil à valider par un coach"
+                                            if p.tip.status == "a_valider" else ""))
+    for note in summary.notes:
+        st.caption(note)
+    st.caption("Conseils indicatifs, à confirmer avec ton coach.")
 
-    if report.pm5 is not None:
-        show_pm5(report)
 
-    st.subheader("Detail par coup")
-    df = pd.read_csv(io.BytesIO(res["csv"])).drop(columns=["force_curve"], errors="ignore")
-    st.dataframe(df.round(2), width="stretch")
+def show_highlights(res: dict) -> None:
+    hl = res.get("highlights")
+    if hl is None:
+        return
+    similar = hl.meta["worst"].get("similar", False)
+    st.subheader("Un de tes coups comparé à la référence" if similar
+                 else "Ton meilleur coup et le coup à améliorer")
+    st.caption("Vert : toi. Jaune : posture de référence. La flèche blanche montre l'articulation "
+               "qui s'écarte le plus et où elle devrait aller. Les vidéos sont au ralenti."
+               + (" Tes coups se ressemblent : un seul est montré." if similar else ""))
+    keys = (("worst", "Coup comparé"),) if similar else (("best", "Ton meilleur coup"),
+                                                         ("worst", "Coup à améliorer"))
+    for col, (key, label) in zip(st.columns(len(keys)), keys, strict=True):
+        m = hl.meta[key]
+        with col:
+            st.markdown(f"{label} (coup n°{m['stroke']})")
+            a, b = st.columns(2)
+            a.image(hl.images[f"{key}_catch"], caption="Au catch"
+                    + (f" : écart surtout au {m['catch_joint']}" if m["catch_joint"] else ""))
+            b.image(hl.images[f"{key}_finish"], caption="Au finish"
+                    + (f" : écart surtout au {m['finish_joint']}" if m["finish_joint"] else ""))
+            st.video(hl.clips[key])
+
+
+def show_result(res: dict, level: str = "Débutant", simulated: bool = False) -> None:
+    report: RowingReport = res["report"]
+    coach = level == "Coach"
+    if simulated:
+        st.info("Données simulées (rameur filaire synthétique) : aucune personne réelle. "
+                "Le pipeline est le même que pour tes vidéos.")
+    show_mode_banner(report, level)
+    mode_texts = tuple(MODE_LABELS.values())
+    for w in report.warnings:
+        if coach or not w.startswith(mode_texts):  # le mode est deja explique plus haut
+            st.warning(w)
+
+    show_summary(report, level)
+
+    st.subheader("La vidéo analysée")
+    st.video(res["dash"])
+    if res.get("ghost"):
+        st.caption("Mode fantôme : le squelette jaune est la posture de référence (modèle issu "
+                   "des consignes Concept2, hypothèses à calibrer), à la même phase du coup.")
+    elif res.get("ghost_requested"):
+        st.info("Mode fantôme indisponible : il faut une vue de profil (analyse complète).")
+    if coach and report.camera_motion_px > 20:
+        st.caption(f"Mouvement de caméra détecté (~{report.camera_motion_px:.0f} px) : compensé.")
+
+    show_highlights(res)
+
+    if coach:
+        c1, c2, c3, c4, c5 = st.columns(5)
+        c1.metric("Coups", report.n_strokes)
+        c2.metric("Cadence médiane", f"{report.stroke_rate_spm:.1f} c/min")
+        c3.metric("Durée du drive", f"{report.drive_time_s:.2f} s")
+        c4.metric("Récup / drive", f"{report.recovery_drive_ratio:.2f} : 1")
+        c5.metric("Régularité (CV)", f"{report.rate_cv_pct:.1f} %")
+
+        st.subheader("Constats de technique (détail)")
+        if not report.findings:
+            st.success("Aucune faute détectée avec les seuils actuels.")
+        for f in report.findings:
+            with st.container(border=True):
+                st.markdown(f"{f.title}"
+                            + ("  (indicatif)" if f.reliability == "indicative" else ""))
+                st.write(f.advice)
+                st.caption(f"{f.metric} médian = {f.median_value:.2f} (seuil {f.comparator} "
+                           f"{f.threshold:g}), {f.n_flagged}/{f.n_valid} coups concernés")
+        if report.pm5 is not None:
+            show_pm5(report)
+        st.subheader("Détail par coup")
+        df = pd.read_csv(io.BytesIO(res["csv"])).drop(columns=["force_curve"], errors="ignore")
+        st.dataframe(df.round(2), width="stretch")
+    else:
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Coups", report.n_strokes)
+        c2.metric("Cadence", f"{report.stroke_rate_spm:.0f} coups/min")
+        c3.metric("Retour / poussée", f"{report.recovery_drive_ratio:.1f} fois plus long",
+                  help="Repère courant : le retour dure environ deux fois la poussée.")
 
     d1, d2, d3 = st.columns(3)
-    d1.download_button("Video annotee (mp4)", res["dash"], "dashboard.mp4", "video/mp4")
-    d2.download_button("Coups (csv)", res["csv"], "strokes.csv", "text/csv")
-    d3.download_button("Resume (json)", json.dumps(json.loads(res["json"]), indent=2),
-                       "summary.json", "application/json")
+    d1.download_button("Vidéo annotée (mp4)", res["dash"], "dashboard.mp4", "video/mp4")
+    if coach:
+        d2.download_button("Coups (csv)", res["csv"], "strokes.csv", "text/csv")
+        d3.download_button("Résumé (json)", json.dumps(json.loads(res["json"]), indent=2),
+                           "summary.json", "application/json")
 
 
 def show_pm5(report: RowingReport) -> None:
@@ -187,18 +271,18 @@ def show_pm5(report: RowingReport) -> None:
         st.caption(f"Drag factor : {p.session.drag_factor:.0f}")
 
 
-def upload_tab() -> None:
+def upload_tab(level: str) -> None:
     cfg = load_config(CFG_PATH)
     if HOSTED:
         st.warning(
-            f"Version d'essai en ligne : {cfg.hosted.max_seconds:.0f} s de video maximum, modele "
-            "de pose leger, calcul sur un serveur gratuit partage (compte une a deux minutes). "
-            "La video est supprimee du serveur apres l'analyse. Pour des videos longues ou "
-            "confidentielles, installe l'outil en local (voir le depot GitHub)."
+            f"Version d'essai en ligne : {cfg.hosted.max_seconds:.0f} s de vidéo maximum, modèle "
+            "de pose léger, calcul sur un serveur gratuit partagé (compte une à deux minutes). "
+            "La vidéo est supprimée du serveur après l'analyse. Pour des vidéos longues ou "
+            "confidentielles, installe l'outil en local (voir le dépôt GitHub)."
         )
-    upload = st.file_uploader("Depose ta video (MP4, AVI, MOV, MKV)",
+    upload = st.file_uploader("Dépose ta vidéo (MP4, AVI, MOV, MKV)",
                               type=["mp4", "avi", "mov", "mkv"], key="video")
-    with st.expander("Reglages et fichier PM5 (optionnel)"):
+    with st.expander("Réglages et fichier PM5 (optionnel)"):
         pm5_upload = st.file_uploader(
             "Fichier PM5 (.jsonl de pm5-record, ou .csv)", type=["jsonl", "csv"], key="pm5",
             help="Couple la video aux donnees du PM5 : validation, force, puissance.")
@@ -224,12 +308,12 @@ def upload_tab() -> None:
         if pick:
             click_pct = (st.slider("Horizontal (%)", 0, 100, 50),
                          st.slider("Vertical (%)", 0, 100, 50))
-    st.caption("Vue de profil, rameur entier visible, de preference 30 images/s ou plus.")
+    st.caption("Vue de profil, rameur entier visible, de préférence 30 images/s ou plus.")
     consent = True
     if HOSTED:
         consent = st.checkbox(
-            "Je confirme avoir l'accord des personnes filmees et j'accepte que la video soit "
-            "traitee sur un serveur externe (supprimee apres l'analyse).")
+            "Je confirme avoir l'accord des personnes filmées et j'accepte que la vidéo soit "
+            "traitée sur un serveur externe (supprimée après l'analyse).")
     go = st.button("Analyser", type="primary", disabled=upload is None or not consent)
 
     if go and upload is not None:
@@ -238,7 +322,7 @@ def upload_tab() -> None:
                      float(max_seconds), stabilize, click_pct)
     result = st.session_state.get("result")
     if result:
-        show_result(result)
+        show_result(result, level)
 
 
 def run_analysis(cfg, upload, pm5_upload, pm5_lag, mode, start_s, max_seconds, stabilize,
@@ -281,6 +365,13 @@ def run_analysis(cfg, upload, pm5_upload, pm5_lag, mode, start_s, max_seconds, s
         dash = render_dashboard(video_path, trace, report, run_dir / "dashboard.mp4",
                                 progress=progress, ghost=ghost_model)
         result = pack_result(report, cfg, dash.read_bytes())
+        result["highlights"] = None
+        if ghost_model is not None:
+            progress(0.99, "Images clés et ralentis...")
+            try:
+                result["highlights"] = render_highlights(video_path, trace, report, ghost_model)
+            except Exception:  # les images clés sont un bonus : l'analyse reste affichée
+                logging.getLogger(__name__).exception("images clés non générées")
         result["ghost"] = ghost_model is not None
         result["ghost_requested"] = cfg.ghost.enabled
         st.session_state["result"] = result
@@ -293,12 +384,15 @@ def run_analysis(cfg, upload, pm5_upload, pm5_lag, mode, start_s, max_seconds, s
             shutil.rmtree(work, ignore_errors=True)
 
 
-tab_demo, tab_upload = st.tabs(["Demo instantanee", "Analyser ma video"])
+level = st.radio("Affichage", ["Débutant", "Coach"], horizontal=True,
+                 help="Débutant : l'essentiel et des conseils simples. Coach : tous les chiffres, "
+                      "les seuils et les données détaillées.")
+tab_demo, tab_upload = st.tabs(["Démo instantanée", "Analyser ma vidéo"])
 with tab_demo:
     choice = st.radio("Exemple", list(DEMOS), horizontal=True)
-    show_result(demo_result(DEMOS[choice]), simulated=True)
+    show_result(demo_result(DEMOS[choice]), level, simulated=True)
 with tab_upload:
-    upload_tab()
+    upload_tab(level)
 
-st.caption("Les regles de technique sont des hypotheses de depart (guides Concept2) a calibrer : "
+st.caption("Les règles de technique sont des hypothèses de départ (guides Concept2) à calibrer : "
            "voir docs/rowing_concept.md.")

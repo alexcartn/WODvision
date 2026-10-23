@@ -1,0 +1,133 @@
+# Contenu pedagogique de l'application : critères, points forts et conseils par faute.
+# Fichier de CONTENU, a relire et corriger par un coach (aucun code a modifier).
+# Les conseils sont une premiere redaction fondee sur les consignes Concept2 et des exercices
+# classiques d'aviron : status "a_valider" tant qu'un coach ne les a pas confirmes.
+
+criteria:
+  rhythm:
+    label: Rythme
+    available_in: [full, degraded, minimal]
+    codes: [recovery_rushed, rhythm_irregular]
+    strength: "Ton rythme est régulier et ton retour est bien plus lent que ta poussée."
+  sequence:
+    label: Enchaînement
+    available_in: [full, degraded]
+    codes: [trunk_early, arms_early, knee_break_early]
+    strength: "Tu enchaînes bien les jambes, puis le dos, puis les bras."
+  positions:
+    label: Positions
+    available_in: [full]
+    codes: [shin_beyond_vertical, layback_excess, layback_missing, handle_drop,
+            handle_high_finish, chain_misaligned]
+    strength: "Tes positions au catch et au finish sont correctes."
+  endurance:
+    label: Tenue dans la durée
+    available_in: [full, degraded]
+    codes: [trunk_drift, travel_shortening]
+    strength: "Ta technique tient bien quand la fatigue arrive."
+  force:
+    label: Force (PM5)
+    available_in: [full, degraded, minimal]
+    needs_pm5: true
+    codes: [force_peak_early, force_multipeak]
+    strength: "Ta courbe de force est lisse : tu appliques la force progressivement."
+
+# Poids de priorité (defaut 1.0) : une faute a poids plus fort passe devant a gravite egale.
+weights:
+  trunk_early: 1.3
+  arms_early: 1.1
+  trunk_drift: 1.2
+  chain_misaligned: 1.0
+  recovery_rushed: 0.9
+
+tips:
+  trunk_early:
+    title: "Ton dos s'ouvre trop tôt"
+    why: "Si le dos part avant que les jambes poussent, tu perds la puissance des jambes, les plus fortes de ton corps, et tu sollicites ton bas du dos."
+    feeling: "Au début du coup, sens tes pieds pousser la plateforme pendant que ton buste reste incliné et gainé, comme un câble tendu entre la poignée et tes pieds."
+    drill: "Jambes seules : bras tendus, dos fixe, 10 coups. Puis jambes et dos sans les bras, 10 coups. Puis le coup complet."
+    status: a_valider
+  arms_early:
+    title: "Tes bras tirent trop tôt"
+    why: "Les bras sont petits : tirer tôt coupe la poussée des jambes et fatigue les épaules."
+    feeling: "Garde les bras comme des cordes jusqu'à ce que tes jambes soient presque tendues. La poignée ne se rapproche qu'à la fin."
+    drill: "Pause d'une seconde à mi-poussée, jambes tendues et bras encore droits, puis termine le coup. 10 coups."
+    status: a_valider
+  shin_beyond_vertical:
+    title: "Tu vas trop loin vers l'avant au catch"
+    why: "Quand les genoux dépassent les chevilles, le premier appui est moins efficace et tes genoux et ton bas du dos fatiguent."
+    feeling: "Au catch, tes tibias sont à peu près verticaux. Inutile de te compresser davantage."
+    drill: "Retour lent en trois temps : arrête-toi au catch, vérifie la position de tes tibias (miroir ou vidéo), puis pousse."
+    status: a_valider
+  layback_excess:
+    title: "Tu te renverses trop en arrière au finish"
+    why: "Un recul excessif fatigue les abdominaux et le dos, et ralentit le retour : tu perds du temps et de l'énergie."
+    feeling: "Termine avec un léger recul, tenu par les abdominaux, coudes proches du corps."
+    drill: "Marque une pause de 2 secondes au finish : si tu ne peux pas tenir la position sans effort, tu es trop en arrière. 10 coups."
+    status: a_valider
+  layback_missing:
+    title: "Tu ne termines pas ton coup"
+    why: "Sans léger recul, les jambes finissent leur poussée sans que le buste suive : tu laisses de la puissance."
+    feeling: "Finis en ouvrant les hanches : sens les abdominaux tenir ton buste, la poignée arrive sous les côtes."
+    drill: "Pause d'une seconde au finish, jambes tendues et léger recul, poignée sous les côtes. 10 coups."
+    status: a_valider
+  handle_drop:
+    title: "Ta poignée plonge au catch"
+    why: "Une poignée trop basse fait travailler les épaules et casse la ligne de traction."
+    feeling: "Après les genoux, laisse la poignée remonter un peu vers le catch, bras relâchés."
+    drill: "Retour lent : regarde la poignée passer au-dessus de tes genoux, puis roule vers le catch."
+    status: a_valider
+  handle_high_finish:
+    title: "Tu tires la poignée trop haut"
+    why: "Tirer vers la poitrine ou le menton déséquilibre le coup et fatigue les épaules."
+    feeling: "Ramène la poignée sous les côtes, en ligne droite, poignets plats."
+    drill: "Garde la chaîne à l'horizontale pendant tout le coup, en demandant à quelqu'un de la regarder ou en te filmant."
+    status: a_valider
+  chain_misaligned:
+    title: "La chaîne monte pendant ton coup"
+    why: "La force est la mieux transmise dans l'axe de la chaîne : tirer vers le haut gaspille de l'énergie."
+    feeling: "La poignée voyage en ligne droite vers le volant, chaîne à l'horizontale."
+    drill: "Filme-toi de profil ou fais-toi observer, et tire en gardant la chaîne parallèle au rail."
+    status: a_valider
+  knee_break_early:
+    title: "Tes genoux plient trop tôt au retour"
+    why: "Si les genoux montent avant que les mains passent, la poignée accroche les genoux ou le buste se bloque."
+    feeling: "Retour dans l'ordre : bras tendus, buste qui se penche, puis seulement les genoux."
+    drill: "Retour en trois temps (bras, buste, glisse) en comptant 1-2-3, 10 coups."
+    status: a_valider
+  recovery_rushed:
+    title: "Ton retour est trop rapide"
+    why: "Un retour trop court laisse peu de temps pour te placer et te fatigue plus vite. Repère courant : le retour dure environ deux fois la poussée."
+    feeling: "Pousse vite, reviens lentement : un temps pour la poussée, deux pour le retour."
+    drill: "3 minutes à 22 coups par minute en comptant « poussée, retour, retour »."
+    status: a_valider
+  rhythm_irregular:
+    title: "Ton rythme varie beaucoup"
+    why: "Un rythme régulier économise l'énergie et rend la technique plus facile à tenir."
+    feeling: "Choisis une cadence et tiens-la, en t'aidant du compteur."
+    drill: "5 minutes à cadence fixe (par exemple 20) : règle l'effort sans changer la cadence."
+    status: a_valider
+  trunk_drift:
+    title: "Ton buste s'affaisse avec la fatigue"
+    why: "Un buste de plus en plus penché au catch augmente la contrainte sur le bas du dos : la fatigue accentue ce défaut, surtout sur ergomètre."
+    feeling: "Garde la poitrine ouverte et le dos gainé au catch, même fatigué."
+    drill: "Fais des séries plus courtes en gardant la même posture ; si le dos s'arrondit, baisse l'intensité ou arrête-toi."
+    status: a_valider
+  travel_shortening:
+    title: "Ton coup raccourcit quand tu te fatigues"
+    why: "Raccourcir le coup réduit la puissance de chaque poussée."
+    feeling: "Garde le même catch et le même finish du premier au dernier coup."
+    drill: "Séries courtes avec la même longueur de coup du début à la fin ; baisse la cadence si besoin."
+    status: a_valider
+  force_peak_early:
+    title: "Ton premier appui est trop brutal"
+    why: "Un pic de force au tout début de la poussée signale un coup trop sec. Concept2 recommande une force qui monte progressivement (courbe lisse)."
+    feeling: "Accroche l'eau en douceur, puis accélère en poussant sur toute la course."
+    drill: "Catch lent à 18 coups par minute, en construisant la force sur toute la poussée."
+    status: a_valider
+  force_multipeak:
+    title: "Ta force arrive par à-coups"
+    why: "Plusieurs pics sur la courbe de force signalent des transitions jambes, dos, bras saccadées (consigne Concept2)."
+    feeling: "Enchaîne les trois segments comme un seul mouvement fluide."
+    drill: "Exercices avec pause puis coups complets, en cherchant une courbe de force lisse sur l'écran."
+    status: a_valider

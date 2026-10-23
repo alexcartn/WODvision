@@ -113,3 +113,20 @@ def test_ghost_is_independent_of_camera_roll(roll):
     gb = GhostModel(estimate_anthropometry(base.series, base.frame), MATCHING)
     gr = GhostModel(estimate_anthropometry(rolled.series, rolled.frame), MATCHING)
     assert body_error(rolled, gr) == pytest.approx(body_error(base, gb), abs=0.03)
+
+
+def test_reference_respects_the_rules_applied_to_the_athlete():
+    report = analyze()
+    anthro = estimate_anthropometry(report.series, report.frame)
+    g = GhostModel(anthro, GhostConfig())
+    r = Config().rowing
+    catch, finish = g.pose("drive", 0.0), g.pose("drive", 1.0)
+    # Poignee au finish : sous la limite "trop haute".
+    span = finish["shoulder"][1] - finish["hip"][1]
+    assert (finish["wrist"][1] - finish["hip"][1]) / span <= r.max_handle_height_at_finish
+    # Poignee au catch : pas en dessous de la limite "plonge".
+    assert (catch["wrist"][1] - catch["knee"][1]) / anthro.torso >= r.min_handle_height_at_catch
+    # Tibias verticaux, recul dans la plage admise, sequence : le fantome n'est jamais en faute.
+    shin = np.degrees(np.arctan2(*(catch["knee"] - catch["ankle"])[:2]))
+    assert shin >= -r.max_shin_beyond_vertical_deg
+    assert r.min_layback_deg <= GhostModel.trunk_lean_deg(finish) <= r.max_layback_deg

@@ -92,3 +92,4 @@ ghost:
   arm_onset: 0.8
   knee_break: 0.6
   leg_straight_fraction: 0.98
+  handle_finish_ratio: 0.6

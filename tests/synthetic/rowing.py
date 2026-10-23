@@ -36,6 +36,7 @@ class RowerParams:
     noise_px: float = 1.5
     roll_deg: float = 0.0  # roulis de camera (rotation de l'image)
     period_jitter: float = 0.0  # ecart-type relatif de la periode de chaque coup
+    fault_jitter: float = 0.0  # ecart-type du demarrage du dos (fraction du drive) coup par coup
     yaw_deg: float = 0.0  # 0 = profil ; > 0 = camera tournee vers l'avant/arriere du rameur
     px_per_m: float = 300.0
     origin_px: tuple[float, float] = (400.0, 600.0)  # position de la cheville dans l'image
@@ -89,6 +90,10 @@ def generate_rower(p: RowerParams) -> tuple[np.ndarray, np.ndarray, np.ndarray, 
     n_max = int(p.duration_s / period * 1.6) + 4
     periods = period * (1.0 + p.period_jitter * rng.standard_normal(n_max))
     starts = np.concatenate([[0.0], np.cumsum(periods)])
+    onsets = np.clip(
+        p.trunk_onset + p.fault_jitter * np.random.default_rng(p.seed + 1).standard_normal(n_max),
+        0.02, 0.85,
+    )
     truth_catches = starts[starts < p.duration_s]
 
     for i, ti in enumerate(t):
@@ -97,7 +102,7 @@ def generate_rower(p: RowerParams) -> tuple[np.ndarray, np.ndarray, np.ndarray, 
         if phase < d:
             u = phase / d
             leg = _smooth(u / 0.7)
-            trunk = _smooth((u - p.trunk_onset) / (0.9 - p.trunk_onset))
+            trunk = _smooth((u - onsets[k]) / (0.9 - onsets[k]))
             arm = _smooth((u - p.arm_onset) / (1.0 - p.arm_onset))
         else:
             q = (phase - d) / (1 - d)

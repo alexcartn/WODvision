@@ -24,13 +24,15 @@ from wodvision.io.cache import save_trace  # noqa: E402
 from wodvision.pm5.session import session_from_events, write_event, write_event_header  # noqa: E402
 from wodvision.rowing_pipeline import analyze_trace, get_trace  # noqa: E402
 from wodvision.viz.rowing_dashboard import render_dashboard  # noqa: E402
+from wodvision.viz.rowing_highlights import render_highlights, save_highlights  # noqa: E402
 
 OUT = ROOT / "app" / "demo"
 COMMON = {"duration_s": 20.0, "px_per_m": 200.0, "origin_px": (250.0, 420.0), "noise_px": 1.0,
           "period_jitter": 0.06, "rate_spm": 26.0}
 DEMOS = {
     # Profil : dos qui s'ouvre tot + chaine qui monte, avec PM5 (catch explosif).
-    "profil": {"params": {**COMMON, "trunk_onset": 0.08, "chain_deg": 12.0}, "pm5": True},
+    "profil": {"params": {**COMMON, "trunk_onset": 0.3, "fault_jitter": 0.18, "chain_deg": 12.0},
+               "pm5": True},
     # Oblique : technique propre, analyse en mode degrade.
     "oblique": {"params": {**COMMON, "yaw_deg": 50.0}, "pm5": False},
 }
@@ -56,8 +58,11 @@ def build(name: str, spec: dict) -> None:
             session = session_from_events(events)
             report = analyze_trace(trace, cfg, pm5=session)
         save_trace(trace, OUT / f"{name}_trace.npz")
-        render_dashboard(video, trace, report, OUT / f"{name}.mp4",
-                         ghost=build_ghost(report, cfg.ghost))
+        ghost = build_ghost(report, cfg.ghost)
+        render_dashboard(video, trace, report, OUT / f"{name}.mp4", ghost=ghost)
+        hl = render_highlights(video, trace, report, ghost)
+        if hl is not None:
+            save_highlights(hl, OUT / f"{name}_highlights")
     print(f"{name}: {report.n_strokes} coups, mode {report.mode}, "
           f"{len(report.findings)} constat(s)")
 

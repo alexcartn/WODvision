@@ -9,6 +9,7 @@ Le périmètre actif est désormais l'analyse de la technique d'aviron sur ergom
 - CLI : `wodvision row-analyze <video> [--click-x --click-y] [--from-cache trace.npz]`.
 - Code : `analysis/rowing/` (repère machine, coups, métriques, règles), `stabilization/camera_motion.py`, `rowing_pipeline.py`, `viz/rowing_dashboard.py`.
 - Vue non profil : mode dégradé explicite (modes full / degraded / minimal), angles absolus masqués, mesures relatives conservées et marquées indicatives (`docs/rowing_concept.md` section 3 bis).
+- Synthèse pédagogique : niveaux Débutant / Coach, pastilles par critère, priorités avec conseils (`configs/conseils.yaml`, éditable par un coach), images clés et ralentis du meilleur coup et du coup à améliorer (`coaching.py`, `viz/rowing_highlights.py`, `docs/rowing_concept.md` section 3 quater).
 - Mode fantôme : posture de référence (modèle Concept2 mis à l'échelle du rameur) superposée en vue de profil (`analysis/rowing/ghost.py`, `docs/rowing_concept.md` section 3 ter).
 - Version en ligne gratuite : profil `configs/hosted.yaml`, démo instantanée, Space Hugging Face (`docs/deploiement_huggingface.md`).
 - Règles de technique : explicites, chacune cite métrique, valeur et seuil ; seuils dans `configs/default.yaml` section `rowing`, hypothèses à calibrer (voir `docs/rowing_concept.md`).

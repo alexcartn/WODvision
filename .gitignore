@@ -20,6 +20,7 @@ data/runs/
 
 # Assets de demonstration SIMULES (aucune personne reelle), versionnes volontairement.
 !app/demo/*.mp4
+!app/demo/*/*.mp4
 
 # Sortie du script de deploiement Hugging Face.
 build/

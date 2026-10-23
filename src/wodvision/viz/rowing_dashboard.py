@@ -265,8 +265,8 @@ def _draw_athlete(image, kp, sc, trail, color: RGB):
         cv2.line(image, tuple(int(v) for v in a), tuple(int(v) for v in b), bgr, 2, cv2.LINE_AA)
 
 
-def _draw_ghost(image, pose, report: RowingReport, to_ref: np.ndarray) -> None:
-    """Superpose le fantome (translucide) a l'image : repere machine -> stabilise -> image."""
+def ghost_points_image(pose, report: RowingReport, to_ref: np.ndarray) -> dict:
+    """Articulations du fantome en pixels image : repere machine -> stabilise -> image."""
     frame = report.frame
     inv = np.linalg.inv(to_ref) if report.stabilized else np.eye(3)
     pts = {}
@@ -274,6 +274,12 @@ def _draw_ghost(image, pose, report: RowingReport, to_ref: np.ndarray) -> None:
         x, y = s * frame.u + h * frame.v
         px = inv @ np.array([x, y, 1.0])
         pts[name] = (int(px[0]), int(px[1]))
+    return pts
+
+
+def _draw_ghost(image, pose, report: RowingReport, to_ref: np.ndarray) -> None:
+    """Superpose le fantome (translucide) a l'image."""
+    pts = ghost_points_image(pose, report, to_ref)
     layer = image.copy()
     thick = max(4, round(image.shape[0] / 110))
     bgr = GHOST_COLOR[::-1]

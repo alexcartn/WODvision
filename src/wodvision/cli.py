@@ -293,6 +293,27 @@ def movement_count(
     typer.echo(f"graphique : {out_path}")
 
 
+def _echo_coaching(report) -> None:
+    """Synthese lisible par un amateur (criteres, point fort, priorites avec conseil)."""
+    from pathlib import Path
+
+    from wodvision.coaching import load_coaching, summarize
+
+    path = Path(__file__).resolve().parents[2] / "configs" / "conseils.yaml"
+    if not path.exists():
+        return
+    s = summarize(report, load_coaching(path))
+    typer.echo("--- ce qu'il faut retenir ---")
+    typer.echo("  ".join(f"{c.emoji} {c.label}" for c in s.criteria))
+    if s.strengths:
+        typer.echo(f"point fort : {s.strengths[0]}")
+    for i, p in enumerate(s.priorities, 1):
+        tag = " (indicatif : vue non profil)" if p.reliability == "indicative" else ""
+        typer.echo(f"priorite {i} : {p.tip.title}{tag}")
+        typer.echo(f"  pourquoi : {p.tip.why}")
+        typer.echo(f"  exercice : {p.tip.drill}")
+
+
 def _echo_pm5(p) -> None:
     typer.echo("--- couplage PM5 ---")
     typer.echo(f"coups PM5      : {len(p.session.strokes)} (apparies : {p.n_matched})")
@@ -408,6 +429,7 @@ def row_analyze(
     for f in report.findings:
         tag = " [indicatif]" if f.reliability == "indicative" else ""
         typer.echo(f"- {f.explain()}{tag}")
+    _echo_coaching(report)
     if report.pm5 is not None:
         _echo_pm5(report.pm5)
     if not no_video:
@@ -419,6 +441,16 @@ def row_analyze(
             typer.echo("fantome indisponible (vue non profil ou donnees insuffisantes)")
         render_dashboard(path, trace, report, out / "dashboard.mp4", progress=progress,
                          ghost=ghost_model)
+        if ghost_model is not None:
+            from wodvision.viz.rowing_highlights import render_highlights, save_highlights
+
+            try:
+                hl = render_highlights(path, trace, report, ghost_model)
+                if hl is not None:
+                    save_highlights(hl, out / "highlights")
+                    typer.echo(f"images cles et ralentis : {out / 'highlights'}")
+            except Exception as exc:  # bonus : ne bloque pas l'analyse
+                typer.echo(f"images cles non generees ({exc})")
     typer.echo(f"sorties : {out}")
 
 
