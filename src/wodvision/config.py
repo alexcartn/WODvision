@@ -44,6 +44,46 @@ class TrackingConfig(BaseModel):
     max_occlusion_frames: int = 15
 
 
+class CameraMotionConfig(BaseModel):
+    enabled: bool = True
+    analysis_width_px: int = 640  # largeur de travail pour l'estimation de mouvement
+    max_features: int = 300
+    min_inliers: int = 12  # en dessous, la frame est marquee peu fiable
+    bbox_margin_fraction: float = 0.15  # marge autour de l'athlete exclue du fond
+
+
+class RowingConfig(BaseModel):
+    """Seuils de l'analyse aviron. Ce sont des hypotheses de depart a calibrer
+    sur des videos annotees par un coach (voir docs/rowing_concept.md)."""
+
+    analysis_fps: float = 30.0  # cadence max d'inference (frames sautees au-dela)
+    detect_every_n_frames: int = 8  # detecteur de personnes ; entre deux, bbox deduite de la pose
+    bbox_from_pose_margin: float = 0.25  # marge autour des keypoints pour la bbox deduite
+    cutoff_hz: float = 6.0
+    stroke_prominence_fraction: float = 0.35  # fraction de l'amplitude du signal poignee
+    min_stroke_period_s: float = 1.2
+    min_stroke_rate_spm: float = 10.0
+    max_stroke_rate_spm: float = 50.0
+    phase_onset_fraction: float = 0.1  # debut d'un segment = 10 % de son excursion
+    min_leg_range_deg: float = 20.0
+    min_trunk_range_deg: float = 10.0
+    min_arm_range_deg: float = 30.0
+    flagged_stroke_fraction: float = 0.3  # part de coups fautifs pour lever un constat
+    # Seuils de regles
+    min_leg_fraction_at_trunk_onset: float = 0.4
+    min_leg_fraction_at_arm_onset: float = 0.75
+    max_shin_beyond_vertical_deg: float = 5.0
+    max_layback_deg: float = 35.0
+    min_layback_deg: float = 5.0
+    min_handle_height_at_catch: float = -0.25  # en longueurs de tronc, vs genou
+    max_handle_height_at_finish: float = 0.75  # 0 = hanche, 1 = epaule
+    max_chain_angle_deg: float = 8.0
+    max_knee_break_fraction: float = 0.25
+    min_recovery_drive_ratio: float = 1.3
+    max_trunk_drift_deg: float = 6.0  # derive de l'angle du tronc au catch (fatigue)
+    max_view_shoulder_ratio: float = 0.5  # largeur d'epaules / tronc : au-dela, vue non profil
+
+
 class Config(BaseModel):
     calibration: CalibrationConfig = CalibrationConfig()
     signal: SignalConfig = SignalConfig()
@@ -51,6 +91,8 @@ class Config(BaseModel):
     squat: SquatConfig = SquatConfig()
     pose: PoseConfig = PoseConfig()
     tracking: TrackingConfig = TrackingConfig()
+    camera_motion: CameraMotionConfig = CameraMotionConfig()
+    rowing: RowingConfig = RowingConfig()
 
 
 def load_config(path: str | Path | None = None) -> Config:

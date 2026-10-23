@@ -1,5 +1,17 @@
 # WODVision : analyse vidéo de mouvements CrossFit
 
+## 0. Pivot rameur (octobre 2026)
+
+Le périmètre actif est désormais l'analyse de la technique d'aviron sur ergomètre Concept2, en vue de profil. Le squat (sections 3, 7.5, 7.6, 7.8 à 7.10) est mis en pause, pas supprimé. Tout le reste (contraintes, stack, licences, conventions, cache d'inférence) s'applique inchangé.
+
+- Entrée : vidéos MP4, AVI, MOV (smartphone ou clips YouTube), caméra fixe ou mobile (mouvement de caméra compensé).
+- Interface : application Streamlit locale (`app/streamlit_app.py`), vidéo composite (athlète annoté, squelette seul, indicateurs en direct) + constats.
+- CLI : `wodvision row-analyze <video> [--click-x --click-y] [--from-cache trace.npz]`.
+- Code : `analysis/rowing/` (repère machine, coups, métriques, règles), `stabilization/camera_motion.py`, `rowing_pipeline.py`, `viz/rowing_dashboard.py`.
+- Règles de technique : explicites, chacune cite métrique, valeur et seuil ; seuils dans `configs/default.yaml` section `rowing`, hypothèses à calibrer (voir `docs/rowing_concept.md`).
+- Phase suivante : couplage PM5 (Bluetooth, force, courbe de force) et validation cadence/ratio contre le PM5.
+- Biomécanique, règles, limites et sources : `docs/rowing_concept.md`.
+
 ## 1. Contexte et objectif
 
 Projet personnel de R&D. Outil Python qui analyse une vidéo (fichier ou flux smartphone) d'un athlète CrossFit et produit :

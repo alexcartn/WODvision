@@ -6,6 +6,19 @@ completes, les contraintes (licences, cout, offline-first) et la roadmap
 detaillee (Phase 0 a 5). Ce README documente l'etat reel du depot, pas la
 cible finale.
 
+## Pivot rameur (octobre 2026)
+
+Focus actuel : technique d'aviron sur Concept2 (voir `docs/rowing_concept.md`).
+
+```
+streamlit run app/streamlit_app.py                      # application locale
+wodvision row-analyze data/clip.mp4 --click-x 800 --click-y 450
+wodvision row-analyze x --from-cache data/cache/rowing_<hash>.npz   # sans relancer les modeles
+```
+
+Sorties (`data/runs/<video>/<horodatage>/`) : `dashboard.mp4`, `strokes.csv`, `summary.json`, `config.json`.
+Tests : `pytest` (rameur synthetique, mouvement de camera simule, aucune video reelle requise).
+
 ## Setup
 
 ```

@@ -32,3 +32,16 @@ videos:
     expected_reps: null         # TODO: compter a la main sur le(s) segment(s) retenu(s)
     expected_depth: []
     notes: "Mat Fraser, Open 15.5 (thrusters). Fichier local: data/raw/Mat Frasers CrossFit Open Workout 15.5  FRASER FILES.mp4. A valider avant usage: mouvement = thruster, pas un squat isole."
+
+# Aviron (ergometre Concept2). Memes conventions que ci-dessus ; champs specifiques :
+#   erg_view: side_left | side_right | oblique ; camera_static ; pm5_file (export PM5, optionnel)
+#   expected_strokes: comptage manuel ; expected_faults: codes de analysis/rowing/rules.py
+rowing:
+  - id: row_messenger_001
+    source: fichier local fourni par le porteur (non versionne)
+    movement: row_erg
+    erg_view: oblique          # camera basse, cote volant ; panneau de l'ancien projet incruste a droite
+    camera_static: true
+    expected_strokes: null     # TODO: compter a la main
+    expected_faults: []        # TODO: annotation coach
+    notes: "2080x900, 24 fps, 40 s. Test reel de reference pour le pivot rameur."

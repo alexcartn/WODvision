@@ -293,5 +293,58 @@ def movement_count(
     typer.echo(f"graphique : {out_path}")
 
 
+@app.command("row-analyze")
+def row_analyze(
+    path: str,
+    mode: str = typer.Option("balanced", help="lightweight | balanced | performance"),
+    click_x: float = typer.Option(None, "--click-x", help="X approx. du rameur (px, 1ere frame)."),
+    click_y: float = typer.Option(None, "--click-y", help="Y approx. du rameur (px, 1ere frame)."),
+    start_s: float = typer.Option(0.0, "--start", help="Debut de la fenetre analysee (s)."),
+    max_seconds: float = typer.Option(None, "--max-seconds", help="Limiter la duree analysee."),
+    config: str = typer.Option(None, "--config", help="YAML de config (defaut : interne)."),
+    output_dir: str = typer.Option(None, "--output-dir", help="Defaut : data/runs/<video>/<date>."),
+    no_video: bool = typer.Option(False, "--no-video", help="Ne pas rendre la video annotee."),
+    from_cache: str = typer.Option(None, "--from-cache", help="Trace .npz deja calculee."),
+) -> None:
+    """Analyse technique d'un rameur sur ergometre (vue de profil, camera fixe ou mobile).
+
+    Ecrit strokes.csv, summary.json, config.json et dashboard.mp4 (video annotee
+    + squelette seul + indicateurs en direct) dans le dossier de run.
+    """
+    from wodvision.config import load_config
+    from wodvision.io.cache import load_trace
+    from wodvision.rowing_pipeline import analyze_trace, export_run, get_trace, new_run_dir
+    from wodvision.viz.rowing_dashboard import render_dashboard
+
+    cfg = load_config(config)
+    click = (click_x, click_y) if click_x is not None and click_y is not None else None
+
+    def progress(frac: float, msg: str) -> None:
+        typer.echo(f"[{frac * 100:3.0f} %] {msg}")
+
+    if from_cache:
+        trace = load_trace(from_cache)
+        path = trace.meta["video"]
+    else:
+        trace = get_trace(path, cfg, mode=mode, click_xy=click, max_seconds=max_seconds,
+                          progress=progress, start_s=start_s)
+    report = analyze_trace(trace, cfg)
+    out = export_run(report, Path(output_dir) if output_dir else new_run_dir(path), cfg)
+
+    typer.echo(f"cote visible : {report.side}")
+    typer.echo(f"coups        : {report.n_strokes}")
+    typer.echo(f"cadence      : {report.stroke_rate_spm:.1f} coups/min (mediane)")
+    typer.echo(f"recup/drive  : {report.recovery_drive_ratio:.2f}")
+    typer.echo(f"mouvement cam: {report.camera_motion_px:.0f} px")
+    typer.echo(f"vue (epaules/tronc) : {report.view_shoulder_ratio:.2f}")
+    for w in report.warnings:
+        typer.echo(f"ATTENTION : {w}")
+    for f in report.findings:
+        typer.echo(f"- {f.explain()}")
+    if not no_video:
+        render_dashboard(path, trace, report, out / "dashboard.mp4", progress=progress)
+    typer.echo(f"sorties : {out}")
+
+
 if __name__ == "__main__":
     app()

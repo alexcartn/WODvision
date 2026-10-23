@@ -26,3 +26,39 @@ pose:
 
 tracking:
   max_occlusion_frames: 15
+
+camera_motion:
+  enabled: true
+  analysis_width_px: 640
+  max_features: 300
+  min_inliers: 12
+  bbox_margin_fraction: 0.15
+
+# Aviron (ergometre Concept2, vue de profil). Seuils = hypotheses de depart,
+# a calibrer sur videos annotees (voir docs/rowing_concept.md).
+rowing:
+  analysis_fps: 30.0
+  detect_every_n_frames: 8
+  bbox_from_pose_margin: 0.25
+  cutoff_hz: 6.0
+  stroke_prominence_fraction: 0.35
+  min_stroke_period_s: 1.2
+  min_stroke_rate_spm: 10.0
+  max_stroke_rate_spm: 50.0
+  phase_onset_fraction: 0.1
+  min_leg_range_deg: 20.0
+  min_trunk_range_deg: 10.0
+  min_arm_range_deg: 30.0
+  flagged_stroke_fraction: 0.3
+  min_leg_fraction_at_trunk_onset: 0.4
+  min_leg_fraction_at_arm_onset: 0.75
+  max_shin_beyond_vertical_deg: 5.0
+  max_layback_deg: 35.0
+  min_layback_deg: 5.0
+  min_handle_height_at_catch: -0.25
+  max_handle_height_at_finish: 0.75
+  max_chain_angle_deg: 8.0
+  max_knee_break_fraction: 0.25
+  min_recovery_drive_ratio: 1.3
+  max_trunk_drift_deg: 6.0
+  max_view_shoulder_ratio: 0.5
