@@ -79,3 +79,16 @@ pm5:
   multipeak_prominence: 0.15
   min_force_points: 8
   force_curve_points: 100
+
+# Mode fantome : posture de reference superposee (hypotheses tirees des consignes Concept2).
+ghost:
+  enabled: true
+  lean_catch_deg: -35.0
+  lean_finish_deg: 25.0
+  shin_catch_deg: 0.0
+  leg_end: 0.7
+  trunk_onset: 0.45
+  trunk_end: 0.9
+  arm_onset: 0.8
+  knee_break: 0.6
+  leg_straight_fraction: 0.98

@@ -18,6 +18,7 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
 from wodvision.analysis.rowing.force_curve import normalized_curve
+from wodvision.analysis.rowing.ghost import GHOST_EDGES, GhostModel, phase_of
 from wodvision.analysis.rowing.report import RowingReport
 from wodvision.io.cache import RowingTrace
 from wodvision.io.frames import iter_frames
@@ -39,7 +40,8 @@ EDGES = [(5, 6), (5, 7), (7, 9), (6, 8), (8, 10), (5, 11), (6, 12), (11, 12),
 KP_THR = 0.3
 PANEL_W = 460
 CANVAS_H = 720
-PM5_CANVAS_H = 880  # panneau plus haut quand un PM5 est couple (lignes + courbe de force)
+GHOST_COLOR: RGB = (255, 214, 102)
+PM5_CANVAS_H = 900  # panneau plus haut quand un PM5 est couple (lignes + courbe de force)
 PAD = 22
 
 _FONT_PATH = os.path.join(matplotlib.get_data_path(), "fonts", "ttf", "DejaVuSans.ttf")
@@ -48,6 +50,12 @@ _FONT_BOLD = os.path.join(matplotlib.get_data_path(), "fonts", "ttf", "DejaVuSan
 
 def _font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont:
     return ImageFont.truetype(_FONT_BOLD if bold else _FONT_PATH, size)
+
+
+def mach_series_shoulder_hip(report: RowingReport) -> np.ndarray:
+    """Vecteur hanche -> epaule (s, h) sur la grille des series filtrees."""
+    mach = {k: report.frame.to_machine(report.series.pts[k]) for k in ("shoulder", "hip")}
+    return mach["shoulder"] - mach["hip"]
 
 
 def _phase_at(report: RowingReport, t: float) -> str:
@@ -60,7 +68,7 @@ def _phase_at(report: RowingReport, t: float) -> str:
 
 
 class _Panel:
-    def __init__(self, report: RowingReport, trace: RowingTrace):
+    def __init__(self, report: RowingReport, trace: RowingTrace, ghost: GhostModel | None = None):
         assert report.series is not None and report.frame is not None
         self.report = report
         series = report.series
@@ -75,6 +83,10 @@ class _Panel:
         self.center = (lo + hi) / 2
         self.extent = np.maximum(hi - lo, 1.0)
         self.trace = trace
+        self.ghost = ghost
+        # Inclinaison reelle du buste (deg, + = recul) pour l'ecart au fantome en direct.
+        sh_hip = mach_series_shoulder_hip(report)
+        self.lean_deg = np.degrees(np.arctan2(sh_hip[:, 0], sh_hip[:, 1]))
         pm5 = report.pm5
         self.height = PM5_CANVAS_H if (pm5 is not None and pm5.n_matched) else CANVAS_H
         self.f_label, self.f_big = _font(20, True), _font(56, True)
@@ -125,13 +137,20 @@ class _Panel:
         draw.text((x0, y0 + h + 2), "courbe de force (position de la poignee)",
                   font=self.f_small, fill=MUTED)
 
-    def _skeleton(self, draw, x0, y0, w, h, idx, color):
+    def _skeleton(self, draw, x0, y0, w, h, idx, color, ghost_pose=None):
         kp, sc = self.mach[idx], self.trace.score[idx]
         scale = min((w - 40) / self.extent[0], (h - 40) / self.extent[1])
 
         def pt(p):
             return (x0 + w / 2 + (p[0] - self.center[0]) * scale,
                     y0 + h / 2 - (p[1] - self.center[1]) * scale)
+
+        if ghost_pose is not None:  # fantome sous le squelette reel
+            for a, b in GHOST_EDGES:
+                draw.line([pt(ghost_pose[a]), pt(ghost_pose[b])], fill=GHOST_COLOR, width=7)
+            for p in ghost_pose.values():
+                px, py = pt(p)
+                draw.ellipse([px - 4, py - 4, px + 4, py + 4], fill=GHOST_COLOR)
 
         for a, b in EDGES:
             if sc[a] > KP_THR and sc[b] > KP_THR:
@@ -166,8 +185,14 @@ class _Panel:
                   fill=MUTED)
 
         sy = cy + 126
-        draw.text((PAD, sy), "Squelette seul (repere ergometre)", font=self.f_stat, fill=MUTED)
-        self._skeleton(draw, PAD, sy + 20, PANEL_W - 2 * PAD, 170, idx, color)
+        phase_info = phase_of(r.stroke_events, t) if self.ghost is not None else None
+        ghost_pose = self.ghost.pose(*phase_info) if phase_info else None
+        title = "Squelette seul (repere ergometre)"
+        draw.text((PAD, sy), title, font=self.f_stat, fill=MUTED)
+        if self.ghost is not None:
+            draw.text((PANEL_W - PAD, sy + 2), "fantome = reference", font=self.f_small,
+                      fill=GHOST_COLOR, anchor="ra")
+        self._skeleton(draw, PAD, sy + 20, PANEL_W - 2 * PAD, 170, idx, color, ghost_pose)
 
         def row(y, name, value):
             draw.text((PAD, y), name, font=self.f_stat, fill=MUTED)
@@ -192,10 +217,18 @@ class _Panel:
                 row(ty + 104, "~ Jambes quand le dos part",
                     fmt(100 * last.leg_fraction_at_trunk_onset if last else nan, " %"))
 
-        ay = ty + 142
+        extra = 0
+        if self.ghost is not None:
+            extra = 26
+            gap = nan
+            if ghost_pose is not None:
+                actual = float(np.interp(t, self.t_series, self.lean_deg))
+                gap = actual - GhostModel.trunk_lean_deg(ghost_pose)
+            row(ty + 130, "Ecart buste vs fantome", fmt(gap, "°"))
+        ay = ty + 142 + extra
         pm_row = r.pm5.rows.get(last.index) if (r.pm5 and last is not None) else None
         if r.pm5 is not None and r.pm5.n_matched:
-            y = ty + 130
+            y = ty + 130 + extra
             row(y, "Puissance (PM5)", fmt(pm_row["pm5_power_w"] if pm_row else nan, " W"))
             row(y + 26, "Force de pic (PM5)",
                 fmt(pm_row["pm5_peak_force_lbf"] if pm_row else nan, " lbf"))
@@ -232,15 +265,38 @@ def _draw_athlete(image, kp, sc, trail, color: RGB):
         cv2.line(image, tuple(int(v) for v in a), tuple(int(v) for v in b), bgr, 2, cv2.LINE_AA)
 
 
+def _draw_ghost(image, pose, report: RowingReport, to_ref: np.ndarray) -> None:
+    """Superpose le fantome (translucide) a l'image : repere machine -> stabilise -> image."""
+    frame = report.frame
+    inv = np.linalg.inv(to_ref) if report.stabilized else np.eye(3)
+    pts = {}
+    for name, (s, h) in pose.items():
+        x, y = s * frame.u + h * frame.v
+        px = inv @ np.array([x, y, 1.0])
+        pts[name] = (int(px[0]), int(px[1]))
+    layer = image.copy()
+    thick = max(4, round(image.shape[0] / 110))
+    bgr = GHOST_COLOR[::-1]
+    for a, b in GHOST_EDGES:
+        cv2.line(layer, pts[a], pts[b], bgr, thick, cv2.LINE_AA)
+    for p in pts.values():
+        cv2.circle(layer, p, thick, bgr, -1, cv2.LINE_AA)
+    cv2.addWeighted(layer, 0.6, image, 0.4, 0, image)
+
+
 def render_dashboard(
     video: str | Path,
     trace: RowingTrace,
     report: RowingReport,
     out_path: str | Path,
     progress: Callable[[float, str], None] | None = None,
+    ghost: GhostModel | None = None,
 ) -> Path:
-    """Ecrit la video composite H.264 (video annotee | panneau)."""
-    panel = _Panel(report, trace)
+    """Ecrit la video composite H.264 (video annotee | panneau).
+
+    `ghost` (voir `analysis.rowing.ghost.build_ghost`) superpose la posture de reference.
+    """
+    panel = _Panel(report, trace, ghost)
     stride = int(trace.meta.get("stride", 1))
     fps = float(trace.meta.get("fps", 30.0)) / stride
     rotation = int(trace.meta.get("rotation_deg", 0))
@@ -261,6 +317,13 @@ def render_dashboard(
         color = {"drive": DRIVE_COLOR, "recovery": RECOVERY_COLOR, "none": MUTED}[phase]
         recent = np.flatnonzero((trace.t_s <= t) & (trace.t_s > t - 1.0))
         trail = [trace.xy_raw[j, wrist] for j in recent if trace.score[j, wrist] > KP_THR]
+        phase_info = phase_of(report.stroke_events, t) if ghost is not None else None
+        if phase_info:
+            _draw_ghost(image, ghost.pose(*phase_info), report, trace.to_ref[idx])
+        if ghost is not None:
+            cv2.putText(image, "FANTOME : posture de reference", (14, 28),
+                        cv2.FONT_HERSHEY_SIMPLEX, max(0.5, image.shape[0] / 900),
+                        GHOST_COLOR[::-1], 2, cv2.LINE_AA)
         _draw_athlete(image, trace.xy_raw[idx], trace.score[idx], trail, color)
 
         scale = panel.height / image.shape[0]

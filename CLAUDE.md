@@ -9,6 +9,8 @@ Le périmètre actif est désormais l'analyse de la technique d'aviron sur ergom
 - CLI : `wodvision row-analyze <video> [--click-x --click-y] [--from-cache trace.npz]`.
 - Code : `analysis/rowing/` (repère machine, coups, métriques, règles), `stabilization/camera_motion.py`, `rowing_pipeline.py`, `viz/rowing_dashboard.py`.
 - Vue non profil : mode dégradé explicite (modes full / degraded / minimal), angles absolus masqués, mesures relatives conservées et marquées indicatives (`docs/rowing_concept.md` section 3 bis).
+- Mode fantôme : posture de référence (modèle Concept2 mis à l'échelle du rameur) superposée en vue de profil (`analysis/rowing/ghost.py`, `docs/rowing_concept.md` section 3 ter).
+- Version en ligne gratuite : profil `configs/hosted.yaml`, démo instantanée, Space Hugging Face (`docs/deploiement_huggingface.md`).
 - Règles de technique : explicites, chacune cite métrique, valeur et seuil ; seuils dans `configs/default.yaml` section `rowing`, hypothèses à calibrer (voir `docs/rowing_concept.md`).
 - Couplage PM5 : `pm5/` (parseurs BLE d'après la spec Concept2, session, enregistreur `bleak` optionnel, extra `pm5`), `analysis/rowing/pm5_sync.py` (appariement des coups, décalage d'horloge, validation) et `force_curve.py` ; CLI `pm5-record`, `pm5-info`, `row-analyze --pm5`. Dispositions d'octets testées par aller-retour, pas encore vérifiées sur un vrai PM5.
 - Phase suivante : test sur matériel réel (enregistrement PM5 + vidéo de profil), calibration des seuils.

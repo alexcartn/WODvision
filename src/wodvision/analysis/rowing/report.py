@@ -55,6 +55,7 @@ class RowingReport:
     frame: MachineFrame | None = None
     stroke_events: list[Stroke] = field(default_factory=list)
     pm5: Pm5Analysis | None = None  # couplage PM5 (optionnel)
+    stabilized: bool = True  # False si l'analyse a ete faite sur les keypoints bruts (repli)
 
     @property
     def mode_label(self) -> str:

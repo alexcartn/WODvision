@@ -18,6 +18,7 @@ from tests.synthetic import pm5 as syn_pm5  # noqa: E402
 from tests.synthetic.rowing import RowerParams  # noqa: E402
 from tests.synthetic.video import make_scene  # noqa: E402
 
+from wodvision.analysis.rowing.ghost import build_ghost  # noqa: E402
 from wodvision.config import Config  # noqa: E402
 from wodvision.io.cache import save_trace  # noqa: E402
 from wodvision.pm5.session import session_from_events, write_event, write_event_header  # noqa: E402
@@ -55,7 +56,8 @@ def build(name: str, spec: dict) -> None:
             session = session_from_events(events)
             report = analyze_trace(trace, cfg, pm5=session)
         save_trace(trace, OUT / f"{name}_trace.npz")
-        render_dashboard(video, trace, report, OUT / f"{name}.mp4")
+        render_dashboard(video, trace, report, OUT / f"{name}.mp4",
+                         ghost=build_ghost(report, cfg.ghost))
     print(f"{name}: {report.n_strokes} coups, mode {report.mode}, "
           f"{len(report.findings)} constat(s)")
 

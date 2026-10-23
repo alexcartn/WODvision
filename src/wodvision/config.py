@@ -102,6 +102,26 @@ class Pm5Config(BaseModel):
     force_curve_points: int = 100  # reechantillonnage de la forme
 
 
+class GhostConfig(BaseModel):
+    """Posture de reference ("fantome") : modele cinematique tire des consignes Concept2.
+
+    Hypotheses de depart a calibrer avec un coach : les consignes donnent la sequence
+    (jambes, dos, bras) et quelques reperes (tibias verticaux au catch, ~25 deg de recul
+    au finish, poignee a hauteur de genoux), pas un modele numerique complet.
+    """
+
+    enabled: bool = True
+    lean_catch_deg: float = -35.0  # buste penche en avant au catch (negatif = vers le volant)
+    lean_finish_deg: float = 25.0  # recul au finish (manuel Concept2)
+    shin_catch_deg: float = 0.0  # tibias verticaux au catch
+    leg_end: float = 0.7  # fraction du drive ou les jambes finissent leur extension
+    trunk_onset: float = 0.45  # fraction du drive ou le dos demarre
+    trunk_end: float = 0.9
+    arm_onset: float = 0.8  # fraction du drive ou les bras demarrent
+    knee_break: float = 0.6  # fraction de la recuperation avant flexion des genoux
+    leg_straight_fraction: float = 0.98  # jambes quasi tendues au finish
+
+
 class HostedConfig(BaseModel):
     """Limites de la version hebergee (essai en ligne), appliquees par l'application."""
 
@@ -121,6 +141,7 @@ class Config(BaseModel):
     rowing: RowingConfig = RowingConfig()
     pm5: Pm5Config = Pm5Config()
     hosted: HostedConfig = HostedConfig()
+    ghost: GhostConfig = GhostConfig()
 
 
 def load_config(path: str | Path | None = None) -> Config:

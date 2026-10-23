@@ -206,6 +206,7 @@ def analyze_trace(
     xy = trace.xy_raw if unreliable else trace.xy_stab
     report = analyze_keypoints(trace.t_s, xy, trace.score, cfg, camera_motion_px=motion, side=side)
     if unreliable:
+        report.stabilized = False
         report.warnings.append(
             f"Mouvement de camera estime invraisemblable ({motion:.0f} px) : stabilisation "
             "ignoree, analyse sur les keypoints bruts (valable si la camera est fixe)."

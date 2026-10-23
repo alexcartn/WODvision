@@ -74,6 +74,24 @@ Aucun seuil absolu n'est affiché en vue dégradée. Un message explique le mode
 Détection des coups robuste : trois signaux candidats (poignet, hanche, épaule) projetés sur l'axe du rail ; le
 plus régulier (CV de la période) l'emporte, ce qui sauve l'analyse quand le poignet est occulté ou bruité.
 
+## 3 ter. Mode fantôme (posture de référence)
+
+`analysis/rowing/ghost.py`. Un squelette jaune "fantôme" est superposé à la posture réelle, sur la vidéo et dans le
+panneau du squelette seul, avec l'écart de buste en direct (degrés, + = plus de recul que la référence).
+
+- Modèle cinématique plan dans le repère machine, mis à l'échelle des segments du rameur (cuisse, tibia, tronc,
+  bras), ancré sur sa cheville et à sa hauteur d'assise, synchronisé sur sa phase de coup (progression du drive ou de
+  la récupération, tirée des instants de catch et de finish détectés).
+- Séquence de référence : drive jambes, puis dos, puis bras ; récupération bras, buste, puis jambes. Tibias
+  verticaux au catch, jambes presque tendues et recul de 25° au finish (manuel Concept2), poignée à hauteur de
+  genoux avec chaîne horizontale.
+- Paramètres dans `configs/default.yaml`, section `ghost` : hypothèses tirées des consignes Concept2, qui donnent
+  la séquence et quelques repères mais pas un modèle numérique complet (par exemple l'inclinaison du buste au catch,
+  -35°, est une valeur plausible non sourcée). Ce n'est pas une posture "parfaite" validée sur des rameurs d'élite :
+  c'est un guide visuel à calibrer avec un coach.
+- Disponible en analyse complète (vue de profil) seulement : en vue oblique ou de face, les angles sont déformés et
+  une référence serait trompeuse. Désactivable : `--no-ghost` (CLI) ou la case de l'application.
+
 ## 4. Limites assumées
 
 - Vue 2D : angles hors plan faussés. Le profil strict est la configuration de référence. Une vue oblique

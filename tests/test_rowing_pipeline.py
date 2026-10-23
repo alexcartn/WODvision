@@ -86,7 +86,7 @@ def test_pm5_coupling_in_pipeline_and_dashboard(tmp_path):
     assert report.pm5 is not None and report.pm5.lag == 2
     assert "force_peak_early" in {f.code for f in report.findings}
     out = render_dashboard(video, trace, report, tmp_path / "dash_pm5.mp4")
-    assert probe(out).height == 880
+    assert probe(out).height == 900
     run_dir = export_run(report, tmp_path / "run", cfg)
     import pandas as pd
 
@@ -121,3 +121,32 @@ def test_hosted_profile_loads():
     cfg = load_config("configs/hosted.yaml")
     assert cfg.rowing.analysis_fps == 15.0 and cfg.hosted.max_seconds == 30.0
     assert cfg.rowing.cutoff_hz == 6.0  # defaut conserve
+
+
+def test_ghost_is_drawn_on_the_video_and_in_the_panel(tmp_path):
+    import cv2
+
+    from wodvision.analysis.rowing.ghost import build_ghost
+
+    video = tmp_path / "v.mp4"
+    detector, pose, _ = make_scene(video, PARAMS)
+    cfg = Config()
+    trace = get_trace(video, cfg, cache_dir=tmp_path / "cache", detector=detector, pose=pose)
+    report = analyze_trace(trace, cfg)
+    ghost = build_ghost(report, cfg.ghost)
+    assert ghost is not None
+    plain = render_dashboard(video, trace, report, tmp_path / "plain.mp4")
+    with_ghost = render_dashboard(video, trace, report, tmp_path / "ghost.mp4", ghost=ghost)
+
+    def frame(path, k):
+        cap = cv2.VideoCapture(str(path))
+        cap.set(cv2.CAP_PROP_POS_FRAMES, k)
+        ok, img = cap.read()
+        assert ok
+        return img.astype(int)
+
+    a, b = frame(plain, 150), frame(with_ghost, 150)
+    assert a.shape == b.shape
+    video_part = np.abs(a - b)[:, : a.shape[1] - 460].mean()
+    panel_part = np.abs(a - b)[:, a.shape[1] - 460 :].mean()
+    assert video_part > 0.05 and panel_part > 0.05  # le fantome modifie la video et le panneau

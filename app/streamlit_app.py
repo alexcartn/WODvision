@@ -20,6 +20,7 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
+from wodvision.analysis.rowing.ghost import build_ghost
 from wodvision.analysis.rowing.report import RowingReport
 from wodvision.config import load_config
 from wodvision.io.cache import load_trace
@@ -62,7 +63,9 @@ def demo_result(name: str) -> dict:
     trace = load_trace(DEMO_DIR / f"{name}_trace.npz")
     pm5_path = DEMO_DIR / f"{name}_pm5.jsonl"
     report = analyze_trace(trace, cfg, pm5=load_pm5(pm5_path) if pm5_path.exists() else None)
-    return pack_result(report, cfg, (DEMO_DIR / f"{name}.mp4").read_bytes())
+    result = pack_result(report, cfg, (DEMO_DIR / f"{name}.mp4").read_bytes())
+    result["ghost"] = build_ghost(report, cfg.ghost) is not None
+    return result
 
 
 def pack_result(report: RowingReport, cfg, dash_bytes: bytes) -> dict:
@@ -98,6 +101,11 @@ def show_result(res: dict, simulated: bool = False) -> None:
             )
     for w in report.warnings:
         st.warning(w)
+    if res.get("ghost"):
+        st.caption("Mode fantome : le squelette jaune est la posture de reference (modele issu des "
+                   "consignes Concept2, hypotheses a calibrer), a la meme phase du coup.")
+    elif res.get("ghost_requested"):
+        st.info("Mode fantome indisponible : il faut une vue de profil (analyse complete).")
     if report.camera_motion_px > 20:
         st.caption(f"Mouvement de camera detecte (~{report.camera_motion_px:.0f} px) : compense.")
 
@@ -207,6 +215,10 @@ def upload_tab() -> None:
             "Duree analysee (s)" + (" - 30 max en ligne" if HOSTED else ", 0 = jusqu'a la fin"),
             0, 3600, default_len)
         stabilize = st.checkbox("Compenser le mouvement de camera", value=True)
+        ghost_on = st.checkbox(
+            "Mode fantome : superposer la posture de reference", value=True,
+            help="Squelette jaune = modele de posture issu des consignes Concept2, mis a "
+                 "l'echelle du rameur et synchronise sur son coup. Vue de profil seulement.")
         pick = st.checkbox("Choisir le rameur manuellement (plusieurs personnes dans l'image)")
         click_pct = None
         if pick:
@@ -221,6 +233,7 @@ def upload_tab() -> None:
     go = st.button("Analyser", type="primary", disabled=upload is None or not consent)
 
     if go and upload is not None:
+        cfg.ghost.enabled = ghost_on
         run_analysis(cfg, upload, pm5_upload, int(pm5_lag), mode, float(start_s),
                      float(max_seconds), stabilize, click_pct)
     result = st.session_state.get("result")
@@ -264,9 +277,13 @@ def run_analysis(cfg, upload, pm5_upload, pm5_lag, mode, start_s, max_seconds, s
         report = analyze_trace(trace, cfg, pm5=pm5_session, pm5_lag=pm5_lag or None)
         run_dir = new_run_dir(video_path, work / "runs" if work else "data/runs")
         export_run(report, run_dir, cfg)
+        ghost_model = build_ghost(report, cfg.ghost)
         dash = render_dashboard(video_path, trace, report, run_dir / "dashboard.mp4",
-                                progress=progress)
-        st.session_state["result"] = pack_result(report, cfg, dash.read_bytes())
+                                progress=progress, ghost=ghost_model)
+        result = pack_result(report, cfg, dash.read_bytes())
+        result["ghost"] = ghost_model is not None
+        result["ghost_requested"] = cfg.ghost.enabled
+        st.session_state["result"] = result
     except ValueError as exc:
         st.session_state.pop("result", None)
         st.error(str(exc))

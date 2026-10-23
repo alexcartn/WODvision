@@ -360,6 +360,8 @@ def row_analyze(
     output_dir: str = typer.Option(None, "--output-dir", help="Defaut : data/runs/<video>/<date>."),
     no_video: bool = typer.Option(False, "--no-video", help="Ne pas rendre la video annotee."),
     from_cache: str = typer.Option(None, "--from-cache", help="Trace .npz deja calculee."),
+    ghost: bool = typer.Option(True, "--ghost/--no-ghost",
+                               help="Superpose la posture de reference (profil seulement)."),
     pm5: str = typer.Option(None, "--pm5", help="Fichier PM5 (.jsonl de pm5-record, ou .csv)."),
     pm5_lag: int = typer.Option(None, "--pm5-lag", help="Decalage PM5 - video, en coups."),
     pm5_phase: str = typer.Option(None, "--pm5-phase", help="finish | catch (defaut : auto)."),
@@ -409,7 +411,14 @@ def row_analyze(
     if report.pm5 is not None:
         _echo_pm5(report.pm5)
     if not no_video:
-        render_dashboard(path, trace, report, out / "dashboard.mp4", progress=progress)
+        from wodvision.analysis.rowing.ghost import build_ghost
+
+        cfg.ghost.enabled = cfg.ghost.enabled and ghost
+        ghost_model = build_ghost(report, cfg.ghost)
+        if ghost and ghost_model is None:
+            typer.echo("fantome indisponible (vue non profil ou donnees insuffisantes)")
+        render_dashboard(path, trace, report, out / "dashboard.mp4", progress=progress,
+                         ghost=ghost_model)
     typer.echo(f"sorties : {out}")
 
 
