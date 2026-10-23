@@ -87,6 +87,20 @@ class RowingConfig(BaseModel):
     max_rate_cv_pct: float = 12.0  # irregularite du rythme (CV de la periode des coups)
 
 
+class Pm5Config(BaseModel):
+    """Couplage PM5 : appariement video/PM5 et regles sur la courbe de force."""
+
+    record_phase: str = "auto"  # auto | finish | catch : moment du coup ou le PM5 notifie
+    max_lag: int = 12  # decalage max (en coups) cherche entre les deux sequences
+    ambiguity_confidence: float = 0.5  # en dessous, l'appariement est declare ambigu
+    min_period_std_s: float = 0.05  # variation de periode minimale pour apparier par sequence
+    phase_tolerance_s: float = 0.3  # tolerance pour deduire la phase depuis les etats 100 ms
+    peak_early_pos: float = 0.2  # pic de force avant 20 % de la course = catch explosif
+    multipeak_prominence: float = 0.15  # fraction du pic pour compter un pic secondaire
+    min_force_points: int = 8
+    force_curve_points: int = 100  # reechantillonnage de la forme
+
+
 class Config(BaseModel):
     calibration: CalibrationConfig = CalibrationConfig()
     signal: SignalConfig = SignalConfig()
@@ -96,6 +110,7 @@ class Config(BaseModel):
     tracking: TrackingConfig = TrackingConfig()
     camera_motion: CameraMotionConfig = CameraMotionConfig()
     rowing: RowingConfig = RowingConfig()
+    pm5: Pm5Config = Pm5Config()
 
 
 def load_config(path: str | Path | None = None) -> Config:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 import numpy as np
 
@@ -21,6 +22,9 @@ from wodvision.analysis.rowing.rules import (
 from wodvision.analysis.rowing.series import RowSeries, prepare_series
 from wodvision.analysis.rowing.strokes import Stroke, detect_strokes_multi
 from wodvision.config import Config
+
+if TYPE_CHECKING:
+    from wodvision.analysis.rowing.pm5_sync import Pm5Analysis
 
 MODE_LABELS = {
     "full": "Analyse complete (vue de profil)",
@@ -50,6 +54,7 @@ class RowingReport:
     series: RowSeries | None = None
     frame: MachineFrame | None = None
     stroke_events: list[Stroke] = field(default_factory=list)
+    pm5: Pm5Analysis | None = None  # couplage PM5 (optionnel)
 
     @property
     def mode_label(self) -> str:
@@ -66,6 +71,7 @@ class RowingReport:
             "camera_motion_px": self.camera_motion_px,
             "view_shoulder_ratio": self.view_shoulder_ratio,
             "n_masked_findings": self.n_masked_findings, "warnings": list(self.warnings),
+            **({"pm5": self.pm5.summary_dict()} if self.pm5 else {}),
         }
 
 
@@ -108,7 +114,8 @@ def analyze_keypoints(
     elif ratio > r.max_view_shoulder_ratio:
         mode = "degraded"
 
-    frame = MachineFrame.from_axis(estimate_rail_axis(series.pts["hip"]))
+    up_hint = np.median(series.pts["shoulder"] - series.pts["hip"], axis=0)
+    frame = MachineFrame.from_axis(estimate_rail_axis(series.pts["hip"]), up_hint)
     signals = {
         name: frame.to_machine(series.pts[name])[:, 0] for name in ("wrist", "hip", "shoulder")
     }

@@ -84,19 +84,71 @@ plus régulier (CV de la période) l'emporte, ce qui sauve l'analyse quand le po
 - Seuils non calibrés : à ajuster avec des vidéos annotées par un coach.
 - Vidéo en ralenti : les durées sont faussées (non détecté automatiquement).
 
-## 5. Couplage PM5 (phase suivante)
+## 5. Couplage PM5
 
-Spec Concept2 "PM CSAFE Communication Definition", révision 0.31 (2025). Service BLE rowing :
-- état général (temps, distance, drag factor), état additionnel (vitesse, cadence, allure, puissance, FC),
-- données par coup : drive length, drive time, recovery time, force de pic, force moyenne, travail par coup,
-  compteur de coups,
-- courbe de force complète par coup (PM5v2 uniquement, plusieurs notifications),
-- échantillonnage réglable de 100 ms à 1 s.
+Spec Concept2 "PM CSAFE Communication Definition", révision 0.31 (2025), section Smart Bluetooth.
+UUID = `CE06XXXX-43E5-11E4-916C-0800200C9A66`. Caractéristiques utilisées (`pm5/spec.py`, `pm5/parsers.py`) :
 
-Apports : vérité terrain gratuite pour valider cadence et ratio drive/récup côté vidéo ; forme de la courbe de
-force (pic précoce ou tardif) pour la poussée des jambes. Synchronisation par événements de coup (catch vidéo vs
-début de coup PM5). Web Bluetooth : Chrome et Edge uniquement (pas Safari iOS). Spec et SDK fournis "as-is" :
-vérifier les conditions avant toute redistribution.
+| Id | Contenu | Octets |
+|---|---|---|
+| 0x0031 | état général : temps, distance, état du coup (drive / dwelling / recovery), drag factor | 19 |
+| 0x0032 | cadence, vitesse, allure, fréquence cardiaque | 17 |
+| 0x0035 | par coup : drive length, drive time, recovery time, force de pic et moyenne, travail, compteur | 20 |
+| 0x0036 | par coup : puissance, calories, compteur | 18 |
+| 0x003D | courbe de force (PM5v2 seulement), plusieurs notifications par courbe | 2 à 20 |
+| 0x0034 | écriture : cadence d'échantillonnage de l'état (3 = 100 ms) | 1 |
+
+Les dispositions d'octets sont testées par aller-retour avec un encodeur écrit d'après la spec (ce test a déjà
+attrapé une erreur de décalage). Elles n'ont pas été vérifiées sur un vrai PM5.
+
+### Chaîne
+
+1. Enregistrer : `wodvision pm5-record --output data/pm5/seance.jsonl` (extra `pip install -e ".[pm5]"`, bibliothèque
+   `bleak`, sans-fil du PM5 activé : More Options > Turn Wireless ON, PM5 non connecté à une autre application).
+   Journal brut horodaté (heure de l'ordinateur), décodé hors ligne. À défaut : un CSV de coups
+   (`pm5/session.py`, colonnes `CSV_COLUMNS`).
+2. Coupler : `wodvision row-analyze video.mp4 --pm5 data/pm5/seance.jsonl [--pm5-lag N] [--pm5-phase finish|catch]`
+   ou le champ PM5 de l'application Streamlit.
+3. Vérifier un fichier : `wodvision pm5-info data/pm5/seance.jsonl`.
+
+### Appariement (`analysis/rowing/pm5_sync.py`)
+
+- Par séquence : décalage entier de coups qui minimise l'écart des périodes et des durées de drive. Trop régulier
+  (variation de période inférieure à 0,05 s, ou aucun décalage ne se détache) : appariement déclaré ambigu, avec
+  avertissement. `--pm5-lag` permet de l'imposer.
+- Décalage d'horloge PM5 = vidéo + offset : médiane des écarts, gigue donnée. Le PM5 notifie un coup à un instant
+  fixe de son cycle (fin du drive, ou début du suivant). La phase est déduite des états à 100 ms si présents, sinon
+  "fin du drive" est supposé (hypothèse non vérifiée : le PM5 ne connaît force de pic et drive length qu'à la fin
+  du drive). Cela décale l'horloge d'au plus un drive et n'affecte pas l'appariement.
+- Validation de la vidéo : écart de période, biais et dispersion du temps de drive. Le drive PM5 (volant en
+  accélération) est plus court que le drive vidéo : un biais est normal, la dispersion est l'indicateur.
+- Contrôle de cohérence : longueur de tronc déduite = drive length PM5 / amplitude de la poignée en longueurs de
+  tronc. Proche de 0,45 à 0,60 m si l'appariement est correct et la vue de profil.
+
+### Courbe de force (`analysis/rowing/force_curve.py`)
+
+L'axe est la position de la poignée (échantillons de ~3 cm d'après le forum Concept2) et l'unité de force n'est pas
+documentée : seule la forme normalisée est utilisée. Repères Concept2 ("Using the Force Curve") : courbe lisse
+= force progressive ; catch explosif = pic aigu décalé vers le début ; plusieurs pics = transition jambes / dos /
+bras à travailler. Règles (seuils = hypothèses) :
+
+| Code | Faute | Métrique | Seuil |
+|---|---|---|---|
+| force_peak_early | pic trop précoce (catch explosif) | position du pic dans le drive | < 0,2 |
+| force_multipeak | transition saccadée | pics secondaires (prominence >= 15 % du pic) | > 1 |
+
+Pas de règle de pic tardif : aucune source solide trouvée. Aucune étude évaluée par des pairs ne relie la forme de
+la courbe à la performance (seulement des consignes Concept2 et des avis de forum).
+
+### Limites et points à vérifier sur matériel
+
+- Réassemblage des courbes (numéro de séquence repartant de 0 à chaque courbe) : hypothèse, courbe abandonnée en
+  cas de perte plutôt que mal reconstruite.
+- Moment exact de la notification de coup (voir ci-dessus).
+- Export du Logbook Concept2 : format non vérifié, non pris en charge pour l'instant (journal brut ou CSV maison).
+- Droits de la spec et du SDK Concept2 : fournis "as-is", à relire avant toute redistribution. `bleak` : licence
+  à confirmer dans son dépôt avant de distribuer (MIT à ma connaissance).
+- Web Bluetooth n'existe pas sur Safari iOS : l'enregistrement passe par l'ordinateur (Python), pas le navigateur.
 
 ## 6. Existant open source (inspiration, pas de dépendance)
 

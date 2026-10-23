@@ -17,6 +17,7 @@ import matplotlib
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
+from wodvision.analysis.rowing.force_curve import normalized_curve
 from wodvision.analysis.rowing.report import RowingReport
 from wodvision.io.cache import RowingTrace
 from wodvision.io.frames import iter_frames
@@ -38,6 +39,7 @@ EDGES = [(5, 6), (5, 7), (7, 9), (6, 8), (8, 10), (5, 11), (6, 12), (11, 12),
 KP_THR = 0.3
 PANEL_W = 460
 CANVAS_H = 720
+PM5_CANVAS_H = 880  # panneau plus haut quand un PM5 est couple (lignes + courbe de force)
 PAD = 22
 
 _FONT_PATH = os.path.join(matplotlib.get_data_path(), "fonts", "ttf", "DejaVuSans.ttf")
@@ -73,6 +75,8 @@ class _Panel:
         self.center = (lo + hi) / 2
         self.extent = np.maximum(hi - lo, 1.0)
         self.trace = trace
+        pm5 = report.pm5
+        self.height = PM5_CANVAS_H if (pm5 is not None and pm5.n_matched) else CANVAS_H
         self.f_label, self.f_big = _font(20, True), _font(56, True)
         self.f_stat, self.f_val, self.f_small = _font(14), _font(20, True), _font(12)
 
@@ -97,6 +101,30 @@ class _Panel:
         draw.line([(px, y0), (px, y0 + h)], fill=TEXT, width=2)
         draw.ellipse([px - 5, py - 5, px + 5, py + 5], fill=color)
 
+    def _force_curves(self, draw, x0, y0, w, h, done, color):
+        """Courbe de force du dernier coup (trait plein) et des 5 precedents (gris)."""
+        pm5 = self.report.pm5
+        curves = []
+        for s in done[-6:]:
+            row = pm5.rows.get(s.index) if pm5 else None
+            raw = row.get("force_curve") if row else None
+            c = normalized_curve(raw, 60) if raw is not None else None
+            if c is not None:
+                curves.append(c)
+        draw.rectangle([x0, y0, x0 + w, y0 + h], outline=BORDER)
+        if not curves:
+            draw.text((x0 + w / 2, y0 + h / 2), "pas de courbe de force", font=self.f_small,
+                      fill=MUTED, anchor="mm")
+            return
+        top = max(float(c.max()) for c in curves)
+        for k, c in enumerate(curves):
+            pts = [(x0 + i / (len(c) - 1) * w, y0 + h - 4 - (v / top) * (h - 10))
+                   for i, v in enumerate(c)]
+            last = k == len(curves) - 1
+            draw.line(pts, fill=color if last else BORDER, width=3 if last else 1)
+        draw.text((x0, y0 + h + 2), "courbe de force (position de la poignee)",
+                  font=self.f_small, fill=MUTED)
+
     def _skeleton(self, draw, x0, y0, w, h, idx, color):
         kp, sc = self.mach[idx], self.trace.score[idx]
         scale = min((w - 40) / self.extent[0], (h - 40) / self.extent[1])
@@ -116,7 +144,7 @@ class _Panel:
 
     def render(self, t: float, idx: int) -> np.ndarray:
         r = self.report
-        img = Image.new("RGB", (PANEL_W, CANVAS_H), BG)
+        img = Image.new("RGB", (PANEL_W, self.height), BG)
         draw = ImageDraw.Draw(img)
         phase = _phase_at(r, t)
         color = {"drive": DRIVE_COLOR, "recovery": RECOVERY_COLOR, "none": MUTED}[phase]
@@ -165,6 +193,16 @@ class _Panel:
                     fmt(100 * last.leg_fraction_at_trunk_onset if last else nan, " %"))
 
         ay = ty + 142
+        pm_row = r.pm5.rows.get(last.index) if (r.pm5 and last is not None) else None
+        if r.pm5 is not None and r.pm5.n_matched:
+            y = ty + 130
+            row(y, "Puissance (PM5)", fmt(pm_row["pm5_power_w"] if pm_row else nan, " W"))
+            row(y + 26, "Force de pic (PM5)",
+                fmt(pm_row["pm5_peak_force_lbf"] if pm_row else nan, " lbf"))
+            peak_pos = pm_row.get("force_peak_pos", nan) if pm_row else nan
+            row(y + 52, "Pic de force a", fmt(100 * peak_pos, " % du drive"))
+            self._force_curves(draw, PAD, y + 84, PANEL_W - 2 * PAD, 80, done, color)
+            ay = y + 84 + 80 + 22
         alerts = [f for f in r.findings if last is not None and last.index in f.stroke_indices]
         if last is None:
             draw.text((PAD, ay), "En attente du premier coup complet...", font=self.f_stat,
@@ -225,8 +263,8 @@ def render_dashboard(
         trail = [trace.xy_raw[j, wrist] for j in recent if trace.score[j, wrist] > KP_THR]
         _draw_athlete(image, trace.xy_raw[idx], trace.score[idx], trail, color)
 
-        scale = CANVAS_H / image.shape[0]
-        video_img = cv2.resize(image, (round(image.shape[1] * scale), CANVAS_H))
+        scale = panel.height / image.shape[0]
+        video_img = cv2.resize(image, (round(image.shape[1] * scale), panel.height))
         canvas = np.hstack([video_img, panel.render(t, idx)])
         if writer is None:
             writer = H264Writer(out_path, canvas.shape[1], canvas.shape[0], fps)

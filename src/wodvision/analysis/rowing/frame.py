@@ -24,18 +24,25 @@ import numpy as np
 class MachineFrame:
     u: np.ndarray  # axe du rail, vecteur unitaire (image, pixels)
     v: np.ndarray  # perpendiculaire, vers le haut
+    up_hint: np.ndarray | None = None  # direction "haut" observee (hanche -> epaule moyen)
 
     @classmethod
-    def from_axis(cls, u: np.ndarray) -> MachineFrame:
+    def from_axis(cls, u: np.ndarray, up_hint: np.ndarray | None = None) -> MachineFrame:
+        """Repere dont le haut est donne par `up_hint` (tronc moyen), sinon le haut de l'image.
+
+        Le tronc est un meilleur indice que l'image : il reste valide si la camera est
+        tournee (roulis jusqu'a 180 degres), cas ou "haut de l'image" n'a plus de sens.
+        """
         u = np.asarray(u, dtype=float)
         u = u / np.linalg.norm(u)
         v = np.array([-u[1], u[0]])
-        if v[1] > 0:  # y image vers le bas : on veut v vers le haut
+        reference = np.array([0.0, -1.0]) if up_hint is None else np.asarray(up_hint, float)
+        if v @ reference < 0:
             v = -v
-        return cls(u=u, v=v)
+        return cls(u=u, v=v, up_hint=up_hint)
 
     def flipped(self) -> MachineFrame:
-        return MachineFrame.from_axis(-self.u)
+        return MachineFrame.from_axis(-self.u, self.up_hint)
 
     def to_machine(self, xy: np.ndarray) -> np.ndarray:
         """Convertit des points image (..., 2) en coordonnees machine (s, h)."""

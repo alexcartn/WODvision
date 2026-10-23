@@ -65,3 +65,16 @@ rowing:
   view_frontal_ratio: 1.1
   max_travel_loss_pct: 15.0
   max_rate_cv_pct: 12.0
+
+# Couplage PM5 (Concept2). Seuils de courbe de force = hypotheses de depart (guide Concept2 :
+# courbe lisse ; pic precoce = catch explosif ; plusieurs pics = transition jambes/dos/bras).
+pm5:
+  record_phase: auto
+  max_lag: 12
+  ambiguity_confidence: 0.5
+  min_period_std_s: 0.05
+  phase_tolerance_s: 0.3
+  peak_early_pos: 0.2
+  multipeak_prominence: 0.15
+  min_force_points: 8
+  force_curve_points: 100

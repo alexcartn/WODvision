@@ -68,3 +68,28 @@ def test_detector_runs_only_every_n_frames(tmp_path):
     n = len(trace.t_s)
     assert detector.calls <= n // cfg.rowing.detect_every_n_frames + 2
     assert analyze_trace(trace, cfg).n_strokes >= 6
+
+
+def test_pm5_coupling_in_pipeline_and_dashboard(tmp_path):
+    from tests.synthetic import pm5 as syn
+    from wodvision.pm5.session import session_from_events
+
+    video = tmp_path / "v.mp4"
+    params = RowerParams(duration_s=30.0, px_per_m=200.0, origin_px=(250.0, 420.0),
+                         noise_px=0.0, period_jitter=0.08)
+    detector, pose, _ = make_scene(video, params)
+    cfg = Config()
+    trace = get_trace(video, cfg, cache_dir=tmp_path / "cache", detector=detector, pose=pose)
+    base = analyze_trace(trace, cfg)
+    session = session_from_events(syn.make_events(base, lag=2, curve=syn.bell_curve(0.08)))
+    report = analyze_trace(trace, cfg, pm5=session)
+    assert report.pm5 is not None and report.pm5.lag == 2
+    assert "force_peak_early" in {f.code for f in report.findings}
+    out = render_dashboard(video, trace, report, tmp_path / "dash_pm5.mp4")
+    assert probe(out).height == 880
+    run_dir = export_run(report, tmp_path / "run", cfg)
+    import pandas as pd
+
+    df = pd.read_csv(run_dir / "strokes.csv")
+    assert {"pm5_power_w", "pm5_peak_force_lbf", "force_peak_pos"} <= set(df.columns)
+    assert "pm5" in (run_dir / "summary.json").read_text()

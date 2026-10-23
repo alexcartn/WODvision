@@ -26,6 +26,7 @@ mediapipe = ["mediapipe>=0.10"]
 agpl = ["ultralytics>=8.2"]
 train = ["rfdetr>=1.0"]
 app = ["streamlit>=1.38"]
+pm5 = ["bleak>=0.22"]
 dev = ["ruff>=0.6", "pytest>=8.3"]
 
 [project.scripts]

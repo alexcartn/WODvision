@@ -35,6 +35,7 @@ class RowerParams:
     fatigue_drift_deg: float = 0.0  # inclinaison supplementaire du buste au catch en fin de serie
     noise_px: float = 1.5
     roll_deg: float = 0.0  # roulis de camera (rotation de l'image)
+    period_jitter: float = 0.0  # ecart-type relatif de la periode de chaque coup
     yaw_deg: float = 0.0  # 0 = profil ; > 0 = camera tournee vers l'avant/arriere du rameur
     px_per_m: float = 300.0
     origin_px: tuple[float, float] = (400.0, 600.0)  # position de la cheville dans l'image
@@ -84,8 +85,15 @@ def generate_rower(p: RowerParams) -> tuple[np.ndarray, np.ndarray, np.ndarray, 
     xy_m = np.zeros((n, 17, 2))
     wrist_s_catch = None
 
+    # Debuts de coup : periodes constantes, ou variables si period_jitter > 0.
+    n_max = int(p.duration_s / period * 1.6) + 4
+    periods = period * (1.0 + p.period_jitter * rng.standard_normal(n_max))
+    starts = np.concatenate([[0.0], np.cumsum(periods)])
+    truth_catches = starts[starts < p.duration_s]
+
     for i, ti in enumerate(t):
-        phase = (ti % period) / period
+        k = int(np.searchsorted(starts, ti, side="right") - 1)
+        phase = (ti - starts[k]) / periods[k]
         if phase < d:
             u = phase / d
             leg = _smooth(u / 0.7)
@@ -145,5 +153,6 @@ def generate_rower(p: RowerParams) -> tuple[np.ndarray, np.ndarray, np.ndarray, 
         score[:, idx] = 0.9
         if right_side:
             score[:, idx + 1] = 0.8
-    truth = {"period_s": period, "n_strokes_full": int(p.duration_s // period)}
+    truth = {"period_s": period, "n_strokes_full": int(p.duration_s // period),
+             "catch_times": truth_catches, "periods": periods[: len(truth_catches)]}
     return t, img, score, truth

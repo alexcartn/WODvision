@@ -18,11 +18,13 @@ from typing import Protocol
 import cv2
 import numpy as np
 
+from wodvision.analysis.rowing.pm5_sync import couple_pm5
 from wodvision.analysis.rowing.report import RowingReport, analyze_keypoints
 from wodvision.config import Config
 from wodvision.io.cache import RowingTrace, cache_key, load_trace, save_trace
 from wodvision.io.frames import iter_frames
 from wodvision.io.probe import probe
+from wodvision.pm5.session import Pm5Session
 from wodvision.stabilization.camera_motion import (
     CameraMotionEstimator,
     apply_transform,
@@ -175,8 +177,15 @@ def run_inference(
     )
 
 
-def analyze_trace(trace: RowingTrace, cfg: Config, side: str | None = None) -> RowingReport:
-    """Analyse depuis la trace. Repli sur les keypoints bruts si la stabilisation derive."""
+def analyze_trace(
+    trace: RowingTrace, cfg: Config, side: str | None = None, pm5: Pm5Session | None = None,
+    pm5_lag: int | None = None, pm5_phase: str | None = None,
+) -> RowingReport:
+    """Analyse depuis la trace. Repli sur les keypoints bruts si la stabilisation derive.
+
+    Si `pm5` est fourni, les coups video et PM5 sont apparies (voir `pm5_sync`) : validation
+    de la detection video, courbe de force et constats associes.
+    """
     motion = float(trace.meta.get("camera_motion_px", 0.0))
     limit = float(max(trace.meta.get("width", 0), trace.meta.get("height", 0)))
     unreliable = limit > 0 and motion > limit
@@ -187,6 +196,11 @@ def analyze_trace(trace: RowingTrace, cfg: Config, side: str | None = None) -> R
             f"Mouvement de camera estime invraisemblable ({motion:.0f} px) : stabilisation "
             "ignoree, analyse sur les keypoints bruts (valable si la camera est fixe)."
         )
+    if pm5 is not None:
+        coupling = couple_pm5(report, pm5, cfg, lag=pm5_lag, phase=pm5_phase)
+        report.pm5 = coupling
+        report.findings.extend(coupling.findings)
+        report.warnings.extend(coupling.warnings)
     return report
 
 
@@ -219,11 +233,21 @@ def export_run(report: RowingReport, out_dir: str | Path, cfg: Config) -> Path:
 
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
-    pd.DataFrame([s.to_dict() for s in report.strokes]).to_csv(out / "strokes.csv", index=False)
+    rows = []
+    for s in report.strokes:
+        row = s.to_dict()
+        if report.pm5 is not None and s.index in report.pm5.rows:
+            extra = dict(report.pm5.rows[s.index])
+            curve = extra.pop("force_curve", None)
+            row.update(extra)
+            row["force_curve"] = ";".join(f"{v:g}" for v in curve) if curve is not None else ""
+        rows.append(row)
+    pd.DataFrame(rows).to_csv(out / "strokes.csv", index=False)
     summary = report.summary_dict()
     summary["findings"] = [
         {**{k: getattr(f, k) for k in ("code", "title", "metric", "comparator", "threshold",
-                                        "median_value", "n_flagged", "n_valid", "advice")},
+                                        "median_value", "n_flagged", "n_valid", "advice",
+                                        "reliability")},
          "explanation": f.explain()}
         for f in report.findings
     ]

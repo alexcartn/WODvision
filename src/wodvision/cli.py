@@ -293,6 +293,61 @@ def movement_count(
     typer.echo(f"graphique : {out_path}")
 
 
+def _echo_pm5(p) -> None:
+    typer.echo("--- couplage PM5 ---")
+    typer.echo(f"coups PM5      : {len(p.session.strokes)} (apparies : {p.n_matched})")
+    typer.echo(f"decalage coups : {p.lag:+d}  (confiance {p.confidence:.2f}"
+               f"{', AMBIGU' if p.ambiguous else ''})")
+    typer.echo(f"phase PM5      : {p.phase} ({p.phase_source})")
+    typer.echo(f"decalage horloge: PM5 = video {p.offset_s:+.2f} s "
+               f"(gigue {p.offset_jitter_s:.3f} s)")
+    for key, value in p.validation.items():
+        typer.echo(f"  validation {key}: {value:.2f}")
+
+
+@app.command("pm5-record")
+def pm5_record(
+    output: str = typer.Option("data/pm5/session.jsonl", "--output", help="Journal .jsonl."),
+    duration_s: float = typer.Option(None, "--duration", help="Duree (s) ; Ctrl-C pour arreter."),
+    address: str = typer.Option(None, "--address", help="Adresse BLE du PM5 (sinon scan)."),
+) -> None:
+    """Enregistre les notifications Bluetooth du PM5 (extra `pm5`, sans-fil du PM5 actif).
+
+    Lancer l'enregistrement, puis demarrer l'effort et la video. Les coups sont apparies
+    a la video apres coup (`row-analyze --pm5`), le decalage d'horloge est estime.
+    """
+    import asyncio
+
+    from wodvision.pm5.recorder import record
+
+    try:
+        n = asyncio.run(record(output, duration_s, address))
+    except KeyboardInterrupt:
+        typer.echo("arrete par l'utilisateur")
+        return
+    except RuntimeError as exc:
+        typer.echo(f"erreur : {exc}")
+        raise typer.Exit(1) from exc
+    typer.echo(f"{n} notifications enregistrees : {output}")
+
+
+@app.command("pm5-info")
+def pm5_info(path: str) -> None:
+    """Decode un fichier PM5 et resume ses coups (verification avant couplage)."""
+    import numpy as np
+
+    from wodvision.pm5.session import load_pm5
+
+    s = load_pm5(path)
+    st = s.strokes
+    typer.echo(f"coups          : {len(st)}")
+    typer.echo(f"periode mediane: {np.median([x.period_s for x in st]):.2f} s")
+    typer.echo(f"drive median   : {np.median([x.drive_time_s for x in st]):.2f} s")
+    typer.echo(f"drag factor    : {s.drag_factor:.0f}")
+    typer.echo(f"courbes force  : {sum(x.force_curve is not None for x in st)}/{len(st)}")
+    typer.echo(f"etats 100 ms   : {len(s.status)} echantillons")
+
+
 @app.command("row-analyze")
 def row_analyze(
     path: str,
@@ -305,6 +360,9 @@ def row_analyze(
     output_dir: str = typer.Option(None, "--output-dir", help="Defaut : data/runs/<video>/<date>."),
     no_video: bool = typer.Option(False, "--no-video", help="Ne pas rendre la video annotee."),
     from_cache: str = typer.Option(None, "--from-cache", help="Trace .npz deja calculee."),
+    pm5: str = typer.Option(None, "--pm5", help="Fichier PM5 (.jsonl de pm5-record, ou .csv)."),
+    pm5_lag: int = typer.Option(None, "--pm5-lag", help="Decalage PM5 - video, en coups."),
+    pm5_phase: str = typer.Option(None, "--pm5-phase", help="finish | catch (defaut : auto)."),
 ) -> None:
     """Analyse technique d'un rameur sur ergometre (vue de profil, camera fixe ou mobile).
 
@@ -328,7 +386,12 @@ def row_analyze(
     else:
         trace = get_trace(path, cfg, mode=mode, click_xy=click, max_seconds=max_seconds,
                           progress=progress, start_s=start_s)
-    report = analyze_trace(trace, cfg)
+    session = None
+    if pm5:
+        from wodvision.pm5.session import load_pm5
+
+        session = load_pm5(pm5)
+    report = analyze_trace(trace, cfg, pm5=session, pm5_lag=pm5_lag, pm5_phase=pm5_phase)
     out = export_run(report, Path(output_dir) if output_dir else new_run_dir(path), cfg)
 
     typer.echo(f"mode         : {report.mode_label}")
@@ -343,6 +406,8 @@ def row_analyze(
     for f in report.findings:
         tag = " [indicatif]" if f.reliability == "indicative" else ""
         typer.echo(f"- {f.explain()}{tag}")
+    if report.pm5 is not None:
+        _echo_pm5(report.pm5)
     if not no_video:
         render_dashboard(path, trace, report, out / "dashboard.mp4", progress=progress)
     typer.echo(f"sorties : {out}")

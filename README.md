@@ -16,6 +16,9 @@ wodvision row-analyze data/clip.mp4 --click-x 800 --click-y 450
 wodvision row-analyze x --from-cache data/cache/rowing_<hash>.npz   # sans relancer les modeles
 ```
 
+Couplage PM5 : `wodvision pm5-record` (extra `pip install -e ".[pm5]"`) puis
+`wodvision row-analyze video.mp4 --pm5 data/pm5/seance.jsonl`. Détails et limites : `docs/rowing_concept.md` section 5.
+
 Sorties (`data/runs/<video>/<horodatage>/`) : `dashboard.mp4`, `strokes.csv`, `summary.json`, `config.json`.
 Tests : `pytest` (rameur synthetique, mouvement de camera simule, aucune video reelle requise).
 
