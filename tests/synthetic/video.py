@@ -27,7 +27,8 @@ class FakePose:
     def infer(self, image, bbox):
         i = min(self._i, len(self._xy) - 1)
         self._i += 1
-        return Keypoints(xy=self._xy[i].copy(), score=self._score[i].copy())
+        s = image.shape[1] / W
+        return Keypoints(xy=self._xy[i] * s, score=self._score[i].copy())
 
 
 class FakeDetector:
@@ -41,7 +42,8 @@ class FakeDetector:
         from wodvision.detection.person import PersonDetection
 
         self.calls += 1
-        b = self._bboxes[min(self._pose._i, len(self._bboxes) - 1)]
+        s = image.shape[1] / W  # image eventuellement reduite par le pipeline
+        b = tuple(v * s for v in self._bboxes[min(self._pose._i, len(self._bboxes) - 1)])
         return [PersonDetection(bbox_xyxy=b, confidence=0.9)]
 
 

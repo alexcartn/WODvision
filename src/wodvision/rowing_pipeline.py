@@ -122,31 +122,45 @@ def run_inference(
             continue
         image = apply_rotation(image, info.rotation_deg)
         height, width = image.shape[:2]
-        bbox = None
+        # Detection et pose sur une image reduite (gros gain CPU/memoire) ; les resultats
+        # sont remis a l'echelle de l'image d'origine pour le reste de la chaine.
+        max_w = cfg.rowing.inference_max_width
+        scale = min(1.0, max_w / width) if max_w else 1.0
+        small = cv2.resize(image, None, fx=scale, fy=scale) if scale < 1.0 else image
+        s_h, s_w = small.shape[:2]
+        if click_xy is not None and sticky is None:
+            click_small = (click_xy[0] * scale, click_xy[1] * scale)
+        else:
+            click_small = None
+
+        bbox = None  # bbox dans le repere de l'image reduite
         if sticky is not None and n_proc % detect_every:
             bbox = bbox_from_keypoints(
-                prev_xy, prev_score, cfg.rowing.bbox_from_pose_margin, (height, width), min_conf
+                prev_xy, prev_score, cfg.rowing.bbox_from_pose_margin, (s_h, s_w), min_conf
             )
             if bbox is not None:
                 sticky.last_bbox = bbox
         if bbox is None:
-            tracked = tracker.update(detector.detect(image))
+            tracked = tracker.update(detector.detect(small))
             if sticky is None and tracked:
-                sticky = StickyTarget(last_bbox=_first_bbox(tracked, click_xy))
+                sticky = StickyTarget(last_bbox=_first_bbox(tracked, click_small))
             if sticky is not None:
                 bbox = sticky.update(tracked)
         n_proc += 1
 
         if bbox is not None:
-            kp = pose.infer(image, bbox)
-            xy, score = np.asarray(kp.xy, float), np.asarray(kp.score, float)
+            kp = pose.infer(small, bbox)
+            xy_small, score = np.asarray(kp.xy, float), np.asarray(kp.score, float)
         else:
-            xy, score = np.full((17, 2), np.nan), np.zeros(17)
-        prev_xy, prev_score = xy, score
+            xy_small, score = np.full((17, 2), np.nan), np.zeros(17)
+        prev_xy, prev_score = xy_small, score
+        xy = xy_small / scale
+        bbox_full = tuple(v / scale for v in bbox) if bbox is not None else None
 
         if cam_cfg.enabled:
-            step = estimator.update(image, bbox if bbox is not None else
-                                    (sticky.last_bbox if sticky else None))
+            last_small = sticky.last_bbox if sticky else None
+            hint = bbox_full or (tuple(v / scale for v in last_small) if last_small else None)
+            step = estimator.update(image, hint)
             to_ref, reliable = step.to_ref, step.reliable
         else:
             to_ref, reliable = np.eye(3), True
@@ -154,7 +168,7 @@ def run_inference(
         t_l.append(t_s)
         xy_l.append(xy)
         sc_l.append(score)
-        bb_l.append(bbox if bbox is not None else (np.nan,) * 4)
+        bb_l.append(bbox_full if bbox_full is not None else (np.nan,) * 4)
         tr_l.append(to_ref)
         rel_l.append(reliable)
         if progress and duration > 0 and len(t_l) % 10 == 0:
@@ -213,6 +227,7 @@ def get_trace(
     """Charge la trace depuis le cache, ou lance l'inference puis la met en cache."""
     params = {"mode": mode, "click": click_xy, "max_seconds": max_seconds,
               "start_s": start_s, "analysis_fps": cfg.rowing.analysis_fps,
+              "max_width": cfg.rowing.inference_max_width,
               "detect_every": cfg.rowing.detect_every_n_frames,
               "camera": cfg.camera_motion.model_dump(),
               "backend": cfg.pose.backend}

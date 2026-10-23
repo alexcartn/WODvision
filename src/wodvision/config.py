@@ -57,6 +57,7 @@ class RowingConfig(BaseModel):
     sur des videos annotees par un coach (voir docs/rowing_concept.md)."""
 
     analysis_fps: float = 30.0  # cadence max d'inference (frames sautees au-dela)
+    inference_max_width: int = 960  # detection + pose sur image reduite a cette largeur (0 = non)
     detect_every_n_frames: int = 8  # detecteur de personnes ; entre deux, bbox deduite de la pose
     bbox_from_pose_margin: float = 0.25  # marge autour des keypoints pour la bbox deduite
     cutoff_hz: float = 6.0
@@ -101,6 +102,14 @@ class Pm5Config(BaseModel):
     force_curve_points: int = 100  # reechantillonnage de la forme
 
 
+class HostedConfig(BaseModel):
+    """Limites de la version hebergee (essai en ligne), appliquees par l'application."""
+
+    max_seconds: float = 30.0  # duree analysee maximale d'une video deposee
+    max_upload_mb: int = 100
+    mode: str = "lightweight"  # modele de pose impose
+
+
 class Config(BaseModel):
     calibration: CalibrationConfig = CalibrationConfig()
     signal: SignalConfig = SignalConfig()
@@ -111,6 +120,7 @@ class Config(BaseModel):
     camera_motion: CameraMotionConfig = CameraMotionConfig()
     rowing: RowingConfig = RowingConfig()
     pm5: Pm5Config = Pm5Config()
+    hosted: HostedConfig = HostedConfig()
 
 
 def load_config(path: str | Path | None = None) -> Config:

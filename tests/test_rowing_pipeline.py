@@ -93,3 +93,31 @@ def test_pm5_coupling_in_pipeline_and_dashboard(tmp_path):
     df = pd.read_csv(run_dir / "strokes.csv")
     assert {"pm5_power_w", "pm5_peak_force_lbf", "force_peak_pos"} <= set(df.columns)
     assert "pm5" in (run_dir / "summary.json").read_text()
+
+
+def test_downscaled_inference_matches_full_resolution(tmp_path):
+    video = tmp_path / "v.mp4"
+    detector, pose, _ = make_scene(video, PARAMS)
+    full = Config()
+    full.rowing.inference_max_width = 0
+    t_full = get_trace(video, full, cache_dir=tmp_path / "c_full", detector=detector, pose=pose)
+
+    detector2, pose2, _ = make_scene(video, PARAMS)  # reinitialise les compteurs des faux
+    small = Config()
+    small.rowing.inference_max_width = 320  # image reduite de moitie
+    t_small = get_trace(video, small, cache_dir=tmp_path / "c_small",
+                        detector=detector2, pose=pose2)
+    assert t_small.meta["width"] == 640  # la trace reste dans le repere d'origine
+    both = ~np.isnan(t_full.xy_raw[:, 5, 0]) & ~np.isnan(t_small.xy_raw[:, 5, 0])
+    err = np.abs(t_full.xy_raw[both] - t_small.xy_raw[both])
+    assert np.nanmax(err) < 2.0
+    a, b = analyze_trace(t_full, full), analyze_trace(t_small, small)
+    assert a.n_strokes == b.n_strokes
+
+
+def test_hosted_profile_loads():
+    from wodvision.config import load_config
+
+    cfg = load_config("configs/hosted.yaml")
+    assert cfg.rowing.analysis_fps == 15.0 and cfg.hosted.max_seconds == 30.0
+    assert cfg.rowing.cutoff_hz == 6.0  # defaut conserve

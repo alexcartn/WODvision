@@ -38,6 +38,7 @@ camera_motion:
 # a calibrer sur videos annotees (voir docs/rowing_concept.md).
 rowing:
   analysis_fps: 30.0
+  inference_max_width: 960
   detect_every_n_frames: 8
   bbox_from_pose_margin: 0.25
   cutoff_hz: 6.0

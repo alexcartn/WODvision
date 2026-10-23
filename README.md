@@ -16,6 +16,9 @@ wodvision row-analyze data/clip.mp4 --click-x 800 --click-y 450
 wodvision row-analyze x --from-cache data/cache/rowing_<hash>.npz   # sans relancer les modeles
 ```
 
+Version en ligne gratuite (Hugging Face Spaces) : `docs/deploiement_huggingface.md`. Démo instantanée
+(exemples simulés) et analyse de vidéos de 30 s maximum.
+
 Couplage PM5 : `wodvision pm5-record` (extra `pip install -e ".[pm5]"`) puis
 `wodvision row-analyze video.mp4 --pm5 data/pm5/seance.jsonl`. Détails et limites : `docs/rowing_concept.md` section 5.
 

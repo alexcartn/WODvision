@@ -1,0 +1,11 @@
+# Surcharges pour la version hebergee gratuite (CPU partage, peu de memoire).
+# Charger avec : load_config("configs/hosted.yaml") ; les autres valeurs gardent leur defaut.
+rowing:
+  analysis_fps: 15.0
+  inference_max_width: 640
+  detect_every_n_frames: 10
+
+hosted:
+  max_seconds: 30.0
+  max_upload_mb: 100
+  mode: lightweight
