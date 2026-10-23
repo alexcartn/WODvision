@@ -9,6 +9,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT"
+# HF_SDK = gradio (defaut, lanceur Streamlit) ou docker, selon le SDK choisi a la creation du Space.
 bash deploy/huggingface/prepare_space.sh build/hf_space >/dev/null
 cd build/hf_space
 

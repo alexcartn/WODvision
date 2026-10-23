@@ -16,17 +16,23 @@ Objectif : un lien public pour que d'autres essaient l'outil, sans rien payer. L
 ## Étapes
 
 1. Créer un compte gratuit sur huggingface.co.
-2. New Space : nom au choix, SDK Docker (modèle Blank), matériel CPU basic (gratuit), visibilité publique.
+2. New Space : nom au choix, matériel CPU basic (gratuit, pas ZeroGPU), visibilité publique, et le SDK :
+   - Gradio si Docker n'est pas proposé sur ton compte : `app.py` lance l'application Streamlit sur le port 7860
+     (Hugging Face attend un serveur sur ce port, quel qu'il soit). C'est le cas par défaut du script.
+   - Docker si disponible : image avec les modèles légers intégrés (`HF_SDK=docker`).
+   ZeroGPU est inutile : le calcul tourne sur CPU, et ce matériel est réservé aux comptes payants (PRO).
+   Le SDK Static ne convient pas : il ne peut pas exécuter Python.
 3. Créer un jeton d'accès avec droit d'écriture (Settings > Access Tokens).
 4. Pousser l'application, au choix.
 
    Une commande depuis la racine du dépôt (Git LFS installé, jeton jamais affiché) :
    ```
    HF_TOKEN=hf_xxx HF_SPACE=<ton_compte>/<nom_du_space> bash deploy/huggingface/push_space.sh
+   # ajouter HF_SDK=docker si le Space a ete cree avec le SDK Docker
    ```
    Automatique à chaque mise à jour de `main` (GitHub Actions, `.github/workflows/sync_hf_space.yml`) : dans
    GitHub, Settings > Secrets and variables > Actions, créer le secret `HF_TOKEN` (le jeton) et la variable
-   `HF_SPACE` (`<ton_compte>/<nom_du_space>`). Ensuite chaque push sur `main` met le Space à jour, ou à la main
+   `HF_SPACE` (`<ton_compte>/<nom_du_space>`), et éventuellement `HF_SDK` (`gradio` par défaut, ou `docker`). Ensuite chaque push sur `main` met le Space à jour, ou à la main
    via l'onglet Actions (Run workflow). Sans `HF_SPACE`, le job est ignoré.
 
    Le fichier `.gitattributes` fourni range les `.mp4` et `.npz` de démonstration dans Git LFS (Hugging Face
@@ -36,6 +42,10 @@ Objectif : un lien public pour que d'autres essaient l'outil, sans rien payer. L
 6. Mise à jour : relancer la même commande (ou pousser sur `main` si l'automatique est configuré).
 
 ## Points à vérifier (non testés ici)
+
+- Variante Gradio : le lanceur `app.py` a été testé en local (Streamlit répond sur le port 7860) et la résolution
+  des dépendances avec Gradio 6.30.0 ne montre aucun conflit. Les poids des modèles légers (une quarantaine de Mo)
+  se téléchargent au premier calcul, pas à la construction. Python 3.12 est demandé dans l'en-tête du Space.
 
 - Le build Docker n'a pas pu être exécuté dans l'environnement de développement (pas de démon Docker). Équivalent
   testé : installation du dossier `build/hf_space` dans un environnement vierge, puis démarrage de l'application

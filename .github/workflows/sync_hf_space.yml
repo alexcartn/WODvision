@@ -4,6 +4,7 @@ name: Sync Hugging Face Space
 # Configuration unique dans GitHub (Settings > Secrets and variables > Actions) :
 #   secret   HF_TOKEN : jeton Hugging Face avec droit d'ecriture
 #   variable HF_SPACE : <compte>/<nom_du_space>
+#   variable HF_SDK   : gradio (defaut) ou docker, selon le SDK du Space
 # Sans HF_SPACE, le job est ignore.
 on:
   push:
@@ -20,4 +21,5 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
           HF_SPACE: ${{ vars.HF_SPACE }}
+          HF_SDK: ${{ vars.HF_SDK || 'gradio' }}
         run: bash deploy/huggingface/push_space.sh
