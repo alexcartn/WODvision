@@ -55,6 +55,25 @@ la valeur médiane et le seuil. Seuils dans `configs/default.yaml`, section `row
 Non détectable en vision 2D : dos arrondi (COCO-17 ne donne que la ligne épaule-hanche), asymétrie gauche/droite
 (vue de face nécessaire), poussée réelle des pieds (force : PM5).
 
+## 3 bis. Modes d'analyse selon la vue
+
+La vue est classée par le rapport largeur d'épaules / longueur du tronc (médiane, ~0,2 en profil strict,
+~1 de face ou de dos ; seuils `max_view_shoulder_ratio` = 0,5 et `view_frontal_ratio` = 1,1).
+
+| Mode | Vue | Fiable | Indicatif (marqué `~`) | Masqué |
+|---|---|---|---|---|
+| full | profil | tout | - | - |
+| degraded | oblique | comptage, cadence, durée du drive, ratio récup/drive, régularité du rythme | séquence jambes/dos/bras, raccourcissement du drive avec la fatigue | angles et hauteurs absolus : tibia, layback, hauteur de poignée, chaîne, dérive d'angle du tronc |
+| minimal | face / dos | comptage, cadence, ratio, régularité | - | tout le reste |
+
+Principe : une vue non perpendiculaire déforme les angles et hauteurs absolus, mais beaucoup moins les mesures
+relatives (progression de chaque segment normalisée par sa propre excursion, comparaison d'une grandeur à
+elle-même dans le temps, durées). Ces dernières restent donc exploitables, avec la mention "indicatif".
+Aucun seuil absolu n'est affiché en vue dégradée. Un message explique le mode, ce qui reste fiable et comment filmer.
+
+Détection des coups robuste : trois signaux candidats (poignet, hanche, épaule) projetés sur l'axe du rail ; le
+plus régulier (CV de la période) l'emporte, ce qui sauve l'analyse quand le poignet est occulté ou bruité.
+
 ## 4. Limites assumées
 
 - Vue 2D : angles hors plan faussés. Le profil strict est la configuration de référence. Une vue oblique

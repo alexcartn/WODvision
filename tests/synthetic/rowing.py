@@ -35,6 +35,7 @@ class RowerParams:
     fatigue_drift_deg: float = 0.0  # inclinaison supplementaire du buste au catch en fin de serie
     noise_px: float = 1.5
     roll_deg: float = 0.0  # roulis de camera (rotation de l'image)
+    yaw_deg: float = 0.0  # 0 = profil ; > 0 = camera tournee vers l'avant/arriere du rameur
     px_per_m: float = 300.0
     origin_px: tuple[float, float] = (400.0, 600.0)  # position de la cheville dans l'image
     seed: int = 0
@@ -122,6 +123,16 @@ def generate_rower(p: RowerParams) -> tuple[np.ndarray, np.ndarray, np.ndarray, 
                         (L_HIP, hip), (L_KNEE, knee), (L_ANKLE, ankle)):
             xy_m[i, idx] = pt
 
+    # Vue oblique : compression le long du rail, et cote droit visible, decale en profondeur.
+    right_side = False
+    if p.yaw_deg:
+        yaw = np.radians(p.yaw_deg)
+        xy_m[..., 0] *= np.cos(yaw)
+        depth = 0.35 * np.sin(yaw)
+        for left_idx, right_idx in ((5, 6), (7, 8), (9, 10), (11, 12), (13, 14), (15, 16)):
+            xy_m[:, right_idx] = xy_m[:, left_idx] + np.array([depth, 0.0])
+        right_side = True
+
     # Metres (s, h) -> image (x, y vers le bas), roulis de camera, bruit.
     img = np.stack([xy_m[..., 0], -xy_m[..., 1]], axis=-1) * p.px_per_m
     a = np.radians(p.roll_deg)
@@ -132,5 +143,7 @@ def generate_rower(p: RowerParams) -> tuple[np.ndarray, np.ndarray, np.ndarray, 
     score = np.zeros((n, 17))
     for idx in (L_SHOULDER, L_ELBOW, L_WRIST, L_HIP, L_KNEE, L_ANKLE):
         score[:, idx] = 0.9
+        if right_side:
+            score[:, idx + 1] = 0.8
     truth = {"period_s": period, "n_strokes_full": int(p.duration_s // period)}
     return t, img, score, truth

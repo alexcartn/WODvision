@@ -118,3 +118,49 @@ def detect_strokes(
     for i, s in enumerate(kept):
         s.index = i
     return kept, sign
+
+
+def _period_cv(strokes: list[Stroke]) -> float:
+    periods = np.array([s.t_next_catch - s.t_catch for s in strokes])
+    return float(np.std(periods) / np.mean(periods))
+
+
+def detect_strokes_multi(
+    t_s: np.ndarray,
+    signals: dict[str, np.ndarray],
+    prominence_fraction: float = 0.35,
+    min_period_s: float = 1.2,
+    min_rate_spm: float = 10.0,
+    max_rate_spm: float = 50.0,
+    max_period_cv: float = 0.35,
+) -> tuple[str | None, list[Stroke], int]:
+    """Essaie plusieurs signaux (poignet, hanche, epaule) et garde le plus regulier.
+
+    Utile quand le poignet est mal detecte (occultation, vue oblique) : la hanche
+    et l'epaule suivent aussi le cycle du siege. A nombre de coups comparable
+    (>= 80 % du maximum), le signal dont la periode est la plus reguliere gagne ;
+    a egalite, l'ordre du dictionnaire (poignet d'abord) departage.
+
+    Returns:
+        (nom du signal retenu, coups, sens) ; (None, [], 1) si aucun ne convient.
+    """
+    results = []
+    for name, y in signals.items():
+        strokes, sign = detect_strokes(
+            t_s, y, prominence_fraction, min_period_s, min_rate_spm, max_rate_spm
+        )
+        if len(strokes) >= 3 and _period_cv(strokes) <= max_period_cv:
+            results.append((name, strokes, sign, _period_cv(strokes)))
+    if not results:
+        # Aucun signal regulier : renvoyer le meilleur nombre de coups, pour le diagnostic.
+        best = max(
+            ((n, *detect_strokes(t_s, y, prominence_fraction, min_period_s,
+                                 min_rate_spm, max_rate_spm)) for n, y in signals.items()),
+            key=lambda r: len(r[1]),
+        )
+        return best[0], best[1], best[2]
+    most = max(len(r[1]) for r in results)
+    eligible = [r for r in results if len(r[1]) >= 0.8 * most]
+    order = list(signals)
+    name, strokes, sign, _ = min(eligible, key=lambda r: (round(r[3], 2), order.index(r[0])))
+    return name, strokes, sign

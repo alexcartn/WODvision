@@ -8,6 +8,7 @@ Le périmètre actif est désormais l'analyse de la technique d'aviron sur ergom
 - Interface : application Streamlit locale (`app/streamlit_app.py`), vidéo composite (athlète annoté, squelette seul, indicateurs en direct) + constats.
 - CLI : `wodvision row-analyze <video> [--click-x --click-y] [--from-cache trace.npz]`.
 - Code : `analysis/rowing/` (repère machine, coups, métriques, règles), `stabilization/camera_motion.py`, `rowing_pipeline.py`, `viz/rowing_dashboard.py`.
+- Vue non profil : mode dégradé explicite (modes full / degraded / minimal), angles absolus masqués, mesures relatives conservées et marquées indicatives (`docs/rowing_concept.md` section 3 bis).
 - Règles de technique : explicites, chacune cite métrique, valeur et seuil ; seuils dans `configs/default.yaml` section `rowing`, hypothèses à calibrer (voir `docs/rowing_concept.md`).
 - Phase suivante : couplage PM5 (Bluetooth, force, courbe de force) et validation cadence/ratio contre le PM5.
 - Biomécanique, règles, limites et sources : `docs/rowing_concept.md`.

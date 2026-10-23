@@ -109,3 +109,97 @@ def test_non_profile_view_warns():
 def test_profile_view_does_not_warn():
     report, _, _ = run()
     assert not any("profil" in w for w in report.warnings)
+
+
+# --- Vues non profil : mode degrade ---------------------------------------------------------
+
+
+def run_view(yaw=50.0, **kw):
+    p = RowerParams(yaw_deg=yaw, **kw)
+    t, xy, score, truth = generate_rower(p)
+    return analyze_keypoints(t, xy, score, Config()), p
+
+
+def test_oblique_view_is_degraded_but_counts_strokes():
+    base, _, _ = run()
+    report, _ = run_view()
+    assert report.mode == "degraded"
+    assert any("degradee" in w for w in report.warnings)
+    assert report.n_strokes == base.n_strokes
+    assert report.stroke_rate_spm == pytest.approx(24.0, abs=0.7)
+    assert report.recovery_drive_ratio == pytest.approx(base.recovery_drive_ratio, abs=0.3)
+
+
+def test_oblique_clean_stroke_has_no_findings():
+    report, _ = run_view()
+    assert codes(report) == set(), [f.explain() for f in report.findings]
+
+
+def test_oblique_masks_absolute_angle_findings():
+    report, _ = run_view(chain_deg=15.0, lean_finish_deg=50.0)
+    assert not codes(report) & {"chain_misaligned", "layback_excess", "shin_beyond_vertical"}
+    assert report.n_masked_findings >= 1
+
+
+def test_oblique_keeps_relative_findings_as_indicative():
+    report, _ = run_view(trunk_onset=0.05)
+    early = [f for f in report.findings if f.code == "trunk_early"]
+    assert early and early[0].reliability == "indicative"
+
+
+def test_oblique_keeps_timing_findings_as_reliable():
+    report, _ = run_view(rate_spm=36.0, drive_fraction=0.5)
+    rushed = [f for f in report.findings if f.code == "recovery_rushed"]
+    assert rushed and rushed[0].reliability == "reliable"
+
+
+def test_frontal_view_is_minimal():
+    p = RowerParams(yaw_deg=50.0)
+    t, xy, score, _ = generate_rower(p)
+    xy[:, [6, 8, 10, 12, 14, 16], 0] += 0.8 * 0.5 * p.px_per_m  # epaules tres ecartees
+    report = analyze_keypoints(t, xy, score, Config())
+    assert report.mode == "minimal"
+    assert report.n_strokes >= 5
+    assert not codes(report) & {"trunk_early", "arms_early", "knee_break_early"}
+
+
+def test_falls_back_to_hip_when_wrist_is_unusable():
+    p = RowerParams()
+    t, xy, score, _ = generate_rower(p)
+    rng = np.random.default_rng(0)
+    xy[:, 9] += rng.normal(0, 60.0, (len(t), 2))
+    report = analyze_keypoints(t, xy, score, Config())
+    assert report.signal_used in ("hip", "shoulder")
+    assert report.n_strokes >= 5
+    assert report.stroke_rate_spm == pytest.approx(24.0, abs=1.0)
+
+
+def test_detects_travel_loss_with_fatigue():
+    p = RowerParams(duration_s=60.0)
+    t, xy, score, _ = generate_rower(p)
+    # Raccourcit progressivement l'amplitude de la poignee (derive de fatigue).
+    shrink = 1.0 - 0.4 * (t / t[-1])
+    centre = xy[:, [9]].mean(axis=0, keepdims=True)
+    xy[:, 9, 0] = centre[0, 0, 0] + (xy[:, 9, 0] - centre[0, 0, 0]) * shrink
+    report = analyze_keypoints(t, xy, score, Config())
+    assert "travel_shortening" in codes(report)
+
+
+def test_rhythm_cv_flags_irregular_periods():
+    from wodvision.analysis.rowing.metrics import StrokeMetrics
+    from wodvision.analysis.rowing.rules import rhythm_cv
+    from wodvision.config import RowingConfig
+
+    def make(periods):
+        t, out = 0.0, []
+        for i, per in enumerate(periods):
+            out.append(
+                StrokeMetrics(i, t, t + per / 3, t + per, 60 / per, per / 3, per * 2 / 3, 2.0)
+            )
+            t += per
+        return out
+
+    cv, finding = rhythm_cv(make([2.5, 2.5, 2.5, 2.5, 2.5, 2.5]), RowingConfig())
+    assert finding is None and cv < 1
+    cv, finding = rhythm_cv(make([1.5, 3.0, 1.8, 3.2, 1.6, 3.0]), RowingConfig())
+    assert finding is not None and cv > 12

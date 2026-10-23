@@ -82,6 +82,9 @@ class RowingConfig(BaseModel):
     min_recovery_drive_ratio: float = 1.3
     max_trunk_drift_deg: float = 6.0  # derive de l'angle du tronc au catch (fatigue)
     max_view_shoulder_ratio: float = 0.5  # largeur d'epaules / tronc : au-dela, vue non profil
+    view_frontal_ratio: float = 1.1  # au-dela : face ou dos, analyse minimale
+    max_travel_loss_pct: float = 15.0  # raccourcissement du drive avec la fatigue
+    max_rate_cv_pct: float = 12.0  # irregularite du rythme (CV de la periode des coups)
 
 
 class Config(BaseModel):

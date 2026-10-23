@@ -45,6 +45,7 @@ class StrokeMetrics:
     handle_height_at_finish: float = NAN  # 0 = hanche, 1 = epaule
     chain_angle_deg: float = NAN  # pente de la poignee vs rail pendant le drive, + = monte
     knee_break_fraction: float = NAN  # flexion deja faite quand les mains passent les genoux
+    handle_travel: float = NAN  # amplitude de la poignee le long du rail, en longueurs de tronc
     low_quality: bool = False
 
     def to_dict(self) -> dict:
@@ -136,6 +137,7 @@ def compute_stroke_metrics(
 
         # Hauteur de poignee (poignet = proxy), en longueurs de tronc.
         if torso > 0:
+            sm.handle_travel = float(abs(m["wrist"][i_f, 0] - m["wrist"][ic, 0]) / torso)
             sm.handle_height_at_catch = float((m["wrist"][ic, 1] - m["knee"][ic, 1]) / torso)
         span = m["shoulder"][i_f, 1] - m["hip"][i_f, 1]
         if abs(span) > 1e-6:

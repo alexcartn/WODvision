@@ -331,7 +331,8 @@ def row_analyze(
     report = analyze_trace(trace, cfg)
     out = export_run(report, Path(output_dir) if output_dir else new_run_dir(path), cfg)
 
-    typer.echo(f"cote visible : {report.side}")
+    typer.echo(f"mode         : {report.mode_label}")
+    typer.echo(f"cote visible : {report.side} (signal de coups : {report.signal_used})")
     typer.echo(f"coups        : {report.n_strokes}")
     typer.echo(f"cadence      : {report.stroke_rate_spm:.1f} coups/min (mediane)")
     typer.echo(f"recup/drive  : {report.recovery_drive_ratio:.2f}")
@@ -340,7 +341,8 @@ def row_analyze(
     for w in report.warnings:
         typer.echo(f"ATTENTION : {w}")
     for f in report.findings:
-        typer.echo(f"- {f.explain()}")
+        tag = " [indicatif]" if f.reliability == "indicative" else ""
+        typer.echo(f"- {f.explain()}{tag}")
     if not no_video:
         render_dashboard(path, trace, report, out / "dashboard.mp4", progress=progress)
     typer.echo(f"sorties : {out}")

@@ -106,6 +106,22 @@ if not result:
 
 report, dash, run_dir = result["report"], Path(result["dash"]), Path(result["run_dir"])
 
+if report.mode == "full":
+    st.success(report.mode_label)
+else:
+    st.warning(f"Mode : {report.mode_label}")
+    with st.expander("Que signifie ce mode ?", expanded=True):
+        st.markdown(
+            "- Fiable : nombre de coups, cadence, duree du drive, ratio drive/recuperation, "
+            "regularite du rythme.\n"
+            "- Indicatif (marque ~) : sequence jambes / dos / bras, evolution de l'amplitude de "
+            "la poignee. Ces mesures sont relatives, donc moins sensibles a l'angle de vue.\n"
+            "- Masque : angles et hauteurs absolus (tibias, recul du buste, hauteur de poignee, "
+            "alignement de la chaine), qui sont deformes quand la camera n'est pas "
+            "perpendiculaire au rail.\n"
+            "- Pour une analyse complete : camera fixe, perpendiculaire au rail, a hauteur de "
+            "hanche, rameur entier visible."
+        )
 for w in report.warnings:
     st.warning(w)
 if report.camera_motion_px > 20:
@@ -113,18 +129,19 @@ if report.camera_motion_px > 20:
 
 st.video(dash.read_bytes())
 
-c1, c2, c3, c4 = st.columns(4)
+c1, c2, c3, c4, c5 = st.columns(5)
 c1.metric("Coups", report.n_strokes)
 c2.metric("Cadence mediane", f"{report.stroke_rate_spm:.1f} c/min")
 c3.metric("Duree du drive", f"{report.drive_time_s:.2f} s")
 c4.metric("Recup / drive", f"{report.recovery_drive_ratio:.2f} : 1")
+c5.metric("Regularite (CV)", f"{report.rate_cv_pct:.1f} %")
 
 st.subheader("Constats de technique")
 if not report.findings:
     st.success("Aucune faute detectee avec les seuils actuels.")
 for f in report.findings:
     with st.container(border=True):
-        st.markdown(f"{f.title}")
+        st.markdown(f"{f.title}" + ("  (indicatif)" if f.reliability == "indicative" else ""))
         st.write(f.advice)
         st.caption(f"{f.metric} median = {f.median_value:.2f} (seuil {f.comparator} "
                    f"{f.threshold:g}), {f.n_flagged}/{f.n_valid} coups concernes")

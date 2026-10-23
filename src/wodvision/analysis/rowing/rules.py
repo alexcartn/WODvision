@@ -28,6 +28,7 @@ class Finding:
     n_valid: int
     advice: str
     stroke_indices: list[int] = field(default_factory=list)
+    reliability: str = "reliable"  # "reliable" | "indicative" (vue non profil)
 
     def explain(self) -> str:
         return (
@@ -86,8 +87,11 @@ RULES: list[_Rule] = [
 ]
 
 
-# Constats qui ne dependent que du timing (valables meme si la vue n'est pas un profil).
-TIMING_ONLY_CODES = {"recovery_rushed"}
+# Constats fondes sur des mesures relatives (normalisees par coup, ou comparees a elles-memes
+# dans le temps) : peu sensibles a la deformation d'une vue non profil, contrairement aux
+# angles et hauteurs absolus qui sont masques dans ce cas.
+TIMING_CODES = {"recovery_rushed", "rhythm_irregular"}  # fiables meme en vue non profil
+INDICATIVE_CODES = {"trunk_early", "arms_early", "knee_break_early", "travel_shortening"}
 
 
 def evaluate_rules(metrics: list[StrokeMetrics], cfg: RowingConfig) -> list[Finding]:
@@ -139,4 +143,44 @@ def trunk_drift(metrics: list[StrokeMetrics], cfg: RowingConfig) -> tuple[float,
         median_value=drift, n_flagged=len(vals), n_valid=len(vals),
         advice="Perte de position avec la fatigue : garde le buste haut au catch, "
                "reduis la cadence ou l'intensite si besoin.",
+    )
+
+
+def _thirds_change(vals: list[float]) -> float:
+    third = len(vals) // 3
+    return float(np.median(vals[-third:]) / np.median(vals[:third]) - 1.0) * 100.0
+
+
+def travel_drift(metrics: list[StrokeMetrics], cfg: RowingConfig) -> tuple[float, Finding | None]:
+    """Variation (%) de l'amplitude de la poignee, dernier tiers vs premier tiers."""
+    vals = [sm.handle_travel for sm in metrics if not sm.low_quality
+            and np.isfinite(sm.handle_travel)]
+    if len(vals) < 6 or np.median(vals[: len(vals) // 3]) <= 0:
+        return float("nan"), None
+    change = _thirds_change(vals)
+    if change >= -cfg.max_travel_loss_pct:
+        return change, None
+    return change, Finding(
+        code="travel_shortening", title="Drive qui se raccourcit avec la fatigue",
+        metric="handle_travel_change_pct", comparator="<", threshold=-cfg.max_travel_loss_pct,
+        median_value=change, n_flagged=len(vals), n_valid=len(vals),
+        advice="L'amplitude de la poignee diminue : garde un catch aussi long et un finish aussi "
+               "complet en fin de serie, quitte a baisser la cadence.",
+    )
+
+
+def rhythm_cv(metrics: list[StrokeMetrics], cfg: RowingConfig) -> tuple[float, Finding | None]:
+    """Coefficient de variation (%) de la periode des coups."""
+    periods = np.array([sm.t_next_catch - sm.t_catch for sm in metrics])
+    if len(periods) < 5:
+        return float("nan"), None
+    cv = float(np.std(periods) / np.mean(periods) * 100.0)
+    if cv <= cfg.max_rate_cv_pct:
+        return cv, None
+    return cv, Finding(
+        code="rhythm_irregular", title="Rythme irregulier",
+        metric="stroke_period_cv_pct", comparator=">", threshold=cfg.max_rate_cv_pct,
+        median_value=cv, n_flagged=len(periods), n_valid=len(periods),
+        advice="La cadence varie beaucoup d'un coup a l'autre : cherche un rythme regulier, "
+               "en gardant la meme duree de drive et de recuperation.",
     )

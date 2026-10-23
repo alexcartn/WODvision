@@ -125,6 +125,9 @@ class _Panel:
         done = [s for s in r.strokes if s.t_next_catch <= t]
         last = done[-1] if done else None
         draw.text((PAD, PAD - 4), "AVIRON", font=self.f_label, fill=TEXT)
+        if r.mode != "full":
+            tag = "MODE DEGRADE" if r.mode == "degraded" else "MODE MINIMAL"
+            draw.text((PAD + 100, PAD), tag, font=self.f_small, fill=ALERT_COLOR)
         draw.text((PANEL_W - PAD, PAD - 2), label, font=self.f_label, fill=color, anchor="ra")
         draw.text((PAD, PAD + 26), f"{len(done)}", font=self.f_big, fill=color)
         draw.text((PAD + 96, PAD + 62), f"/ {r.n_strokes} coups", font=self.f_stat, fill=MUTED)
@@ -146,14 +149,20 @@ class _Panel:
             return f"{v:.{nd}f}{unit}".replace("-0.0", "0.0") if v == v else "-"
 
         ty = sy + 200
-        row(ty, "Cadence (dernier coup)", fmt(last.stroke_rate_spm if last else float("nan"),
-                                              " c/min"))
-        row(ty + 26, "Recup / drive", fmt(last.recovery_drive_ratio if last else float("nan"),
-                                          " : 1", 1))
-        row(ty + 52, "Genou au catch", fmt(last.knee_angle_catch if last else float("nan"), "°"))
-        row(ty + 78, "Buste au finish", fmt(last.trunk_lean_finish if last else float("nan"), "°"))
-        row(ty + 104, "Angle chaine / rail", fmt(last.chain_angle_deg if last else float("nan"),
-                                                 "°", 1))
+        nan = float("nan")
+        row(ty, "Cadence (dernier coup)", fmt(last.stroke_rate_spm if last else nan, " c/min"))
+        row(ty + 26, "Recup / drive", fmt(last.recovery_drive_ratio if last else nan, " : 1", 1))
+        if r.mode == "full":
+            row(ty + 52, "Genou au catch", fmt(last.knee_angle_catch if last else nan, "°"))
+            row(ty + 78, "Buste au finish", fmt(last.trunk_lean_finish if last else nan, "°"))
+            row(ty + 104, "Angle chaine / rail", fmt(last.chain_angle_deg if last else nan, "°", 1))
+        else:
+            row(ty + 52, "Regularite (CV periode)", fmt(r.rate_cv_pct, " %", 1))
+            travel = last.handle_travel if last else nan
+            row(ty + 78, "Amplitude poignee", fmt(travel, " x tronc", 2))
+            if r.mode == "degraded":
+                row(ty + 104, "~ Jambes quand le dos part",
+                    fmt(100 * last.leg_fraction_at_trunk_onset if last else nan, " %"))
 
         ay = ty + 142
         alerts = [f for f in r.findings if last is not None and last.index in f.stroke_indices]
@@ -166,7 +175,8 @@ class _Panel:
             draw.text((PAD, ay), "A corriger sur le dernier coup :", font=self.f_stat,
                       fill=ALERT_COLOR)
             for k, f in enumerate(alerts[:3]):
-                draw.text((PAD, ay + 22 + 20 * k), f"- {f.title}", font=self.f_small,
+                prefix = "~ " if f.reliability == "indicative" else "- "
+                draw.text((PAD, ay + 22 + 20 * k), f"{prefix}{f.title}", font=self.f_small,
                           fill=TEXT)
         return np.array(img)[:, :, ::-1]  # RGB -> BGR
 
