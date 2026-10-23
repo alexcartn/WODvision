@@ -1,0 +1,11 @@
+block_id,instruction,t_start_video_s,t_end_video_s,n_strokes_counted,expected_faults,coach_note
+A,rythme irregulier,,,,,
+B,propre 22 spm,,,,,
+C,propre 28 spm,,,,,
+D,dos precoce,,,,trunk_early,
+E,bras precoces,,,,arms_early,
+F,tibias au-dela de la verticale,,,,shin_beyond_vertical,
+G,poignee qui monte,,,,chain_misaligned,
+H,catch explosif,,,,force_peak_early,
+I,recul excessif,,,,layback_excess,
+J,fatigue 26 spm,,,,trunk_drift,
