@@ -1,0 +1,23 @@
+name: Sync Hugging Face Space
+
+# Pousse l'application vers le Space a chaque mise a jour de main.
+# Configuration unique dans GitHub (Settings > Secrets and variables > Actions) :
+#   secret   HF_TOKEN : jeton Hugging Face avec droit d'ecriture
+#   variable HF_SPACE : <compte>/<nom_du_space>
+# Sans HF_SPACE, le job est ignore.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  sync:
+    if: ${{ vars.HF_SPACE != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and push the Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_SPACE: ${{ vars.HF_SPACE }}
+        run: bash deploy/huggingface/push_space.sh

@@ -18,20 +18,22 @@ Objectif : un lien public pour que d'autres essaient l'outil, sans rien payer. L
 1. Créer un compte gratuit sur huggingface.co.
 2. New Space : nom au choix, SDK Docker (modèle Blank), matériel CPU basic (gratuit), visibilité publique.
 3. Créer un jeton d'accès avec droit d'écriture (Settings > Access Tokens).
-4. Depuis la racine du dépôt :
+4. Pousser l'application, au choix.
+
+   Une commande depuis la racine du dépôt (Git LFS installé, jeton jamais affiché) :
    ```
-   bash deploy/huggingface/prepare_space.sh          # écrit build/hf_space
-   cd build/hf_space
-   git init -b main && git lfs install
-   git remote add space https://huggingface.co/spaces/<ton_compte>/<nom_du_space>
-   git add . && git commit -m "WODVision Rameur"
-   git push --force space main                        # identifiant HF + jeton comme mot de passe
+   HF_TOKEN=hf_xxx HF_SPACE=<ton_compte>/<nom_du_space> bash deploy/huggingface/push_space.sh
    ```
+   Automatique à chaque mise à jour de `main` (GitHub Actions, `.github/workflows/sync_hf_space.yml`) : dans
+   GitHub, Settings > Secrets and variables > Actions, créer le secret `HF_TOKEN` (le jeton) et la variable
+   `HF_SPACE` (`<ton_compte>/<nom_du_space>`). Ensuite chaque push sur `main` met le Space à jour, ou à la main
+   via l'onglet Actions (Run workflow). Sans `HF_SPACE`, le job est ignoré.
+
    Le fichier `.gitattributes` fourni range les `.mp4` et `.npz` de démonstration dans Git LFS (Hugging Face
-   refuse les binaires hors LFS). Git LFS doit être installé sur ta machine.
+   refuse les binaires hors LFS).
 5. Le Space construit l'image (comptez 5 à 10 minutes : OpenCV, ONNX Runtime, poids des modèles légers intégrés à
    l'image). Ensuite le lien `https://<ton_compte>-<nom_du_space>.hf.space` est partageable.
-6. Mise à jour : relancer `prepare_space.sh` puis le même `git push` depuis `build/hf_space`.
+6. Mise à jour : relancer la même commande (ou pousser sur `main` si l'automatique est configuré).
 
 ## Points à vérifier (non testés ici)
 
