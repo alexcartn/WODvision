@@ -30,9 +30,9 @@ def text(pdf: bytes, tmp_path) -> str:
                           text=True, check=True).stdout
 
 
-def test_beginner_sheet_is_a_valid_two_page_pdf():
+def test_beginner_sheet_is_a_valid_pdf_with_curves_page():
     pdf = build_fiche_pdf(make_report(trunk_onset=0.05), CONTENT, None, "Débutant", "demo.mp4")
-    assert pdf.startswith(b"%PDF") and pages(pdf) == 2
+    assert pdf.startswith(b"%PDF") and pages(pdf) == 3
 
 
 def test_coach_sheet_adds_the_detail_pages():
@@ -76,3 +76,15 @@ def test_curves_figure_needs_enough_strokes_and_is_included_in_the_sheet():
                               Config())
     assert curves_png(short) is None
     assert len(build_fiche_pdf(report, CONTENT, None, "Débutant")) > 0
+
+
+def test_all_curve_figures_render_with_the_reference():
+    from wodvision.analysis.rowing.ghost import build_ghost
+    from wodvision.viz.rowing_curves import curves_png, force_png, sequence_png
+
+    report = make_report()
+    ghost = build_ghost(report, Config().ghost)
+    assert ghost is not None
+    for png in (curves_png(report, ghost), sequence_png(report, ghost)):
+        assert png is not None and png.startswith(b"\x89PNG")
+    assert force_png(report) is None  # pas de PM5 couple

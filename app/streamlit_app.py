@@ -23,7 +23,7 @@ import streamlit as st
 from wodvision.analysis.rowing.ghost import build_ghost
 from wodvision.analysis.rowing.report import MODE_LABELS, RowingReport
 from wodvision.coaching import load_coaching, summarize
-from wodvision.config import load_config
+from wodvision.config import GhostConfig, load_config
 from wodvision.io.cache import load_trace
 from wodvision.report_pdf import build_fiche_pdf
 from wodvision.rowing_pipeline import (
@@ -33,7 +33,7 @@ from wodvision.rowing_pipeline import (
     get_trace,
     new_run_dir,
 )
-from wodvision.viz.rowing_curves import curves_png
+from wodvision.viz.rowing_curves import curves_png, force_png, sequence_png
 from wodvision.viz.rowing_dashboard import render_dashboard
 from wodvision.viz.rowing_diagram import default_phases_diagram
 from wodvision.viz.rowing_highlights import load_highlights, render_highlights
@@ -229,14 +229,18 @@ def show_downloads(res: dict, level: str) -> None:
 
 
 def show_curves(report) -> None:
-    """Courbes superposees de tous les coups (moyenne et ecart-type)."""
-    png = curves_png(report)
-    if png is None:
+    """Enchainement, regularite et courbes superposees de tous les coups."""
+    ghost = build_ghost(report, GhostConfig())
+    figures = [sequence_png(report, ghost), curves_png(report, ghost), force_png(report)]
+    figures = [f for f in figures if f is not None]
+    if not figures:
         return
     st.subheader("Ton geste, coup après coup")
     st.caption("Trait gris : un coup. Courbe bleue : la moyenne. Bande : l'écart-type, donc ta "
-               "régularité. Fond bleu : poussée, fond orange : retour.")
-    st.image(png)
+               "régularité. Fond bleu : poussée, fond orange : retour. Pointillé jaune : "
+               "posture de référence.")
+    for f in figures:
+        st.image(f)
 
 
 def show_result(res: dict, level: str = "Débutant", simulated: bool = False) -> None:

@@ -38,8 +38,10 @@ from reportlab.platypus import (
     TableStyle,
 )
 
+from wodvision.analysis.rowing.ghost import build_ghost
 from wodvision.coaching import CoachingContent, summarize
-from wodvision.viz.rowing_curves import curves_png
+from wodvision.config import GhostConfig
+from wodvision.viz.rowing_curves import curves_png, force_png, sequence_png
 from wodvision.viz.rowing_diagram import default_phases_diagram
 
 STATUS_COLOR = {"ok": "#2f8f5b", "warn": "#e08a1e", "bad": "#d64545", "na": "#9aa0ad"}
@@ -285,16 +287,31 @@ def build_fiche_pdf(
                                _img(default_phases_diagram(), A4[0] - 3.2 * cm, 4.2 * cm)]))
     story.append(PageBreak())
     story += _highlights_section(highlights, s)
-    png = curves_png(report)
-    if png is not None:
+    ghost = build_ghost(report, GhostConfig())
+    full_width = A4[0] - 3.2 * cm
+    seq = sequence_png(report, ghost)
+    if seq is not None:
         story.append(KeepTogether([
-            Paragraph("Ton geste, coup après coup", s["h2"]),
-            _p(f"Chaque trait gris est un de tes {len(report.stroke_events)} coups, la courbe bleue "  # noqa: E501
-               "est la moyenne et la bande bleue l'écart-type : plus la bande est fine, plus tu "
-               "répètes le même geste. Fond bleu : la poussée. Fond orange : le retour.",
-               s["small"]),
-            Spacer(1, 3), _img(png, A4[0] - 3.2 * cm, 8.8 * cm)]))
-        story.append(Spacer(1, 6))
+            Paragraph("Ton enchaînement et ta régularité", s["h2"]),
+            _p("Gauche : à quel moment de la poussée chaque segment se déplie (jambes en bleu, "
+               "dos en vert, bras en orange). Les jambes doivent partir en premier. Droite : plus "
+               "la barre est courte, plus tu répètes le même geste.", s["small"]),
+            Spacer(1, 3), _img(seq, full_width, 6.2 * cm)]))
+    curves = curves_png(report, ghost)
+    if curves is not None:
+        story += [PageBreak(), Paragraph("Ton geste, coup après coup", s["h2"]), _p(
+            f"Chaque trait gris est un de tes {len(report.stroke_events)} coups, la courbe bleue "
+            "est la moyenne et la bande l'écart-type : plus la bande est fine, plus tu répètes le "
+            "même geste. Fond bleu : la poussée. Fond orange : le retour."
+            + (" Pointillé jaune : la posture de référence." if ghost is not None else ""),
+            s["small"]), Spacer(1, 3), _img(curves, full_width, 15.5 * cm)]
+    force = force_png(report)
+    if force is not None:
+        story += [Spacer(1, 6), KeepTogether([
+            Paragraph("Ta courbe de force (PM5)", s["h2"]),
+            _p("Forme de la force pendant la poussée, chaque coup ramené à son pic. Une bosse "
+               "arrondie, un peu avant le milieu, est le profil visé.", s["small"]),
+            Spacer(1, 3), _img(force, full_width, 6.2 * cm)])]
     if coach:
         story += _coach_appendix(report, s)
     doc.build(story)
