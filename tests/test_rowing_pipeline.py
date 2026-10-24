@@ -190,3 +190,14 @@ def test_no_highlights_outside_profile_view(tmp_path):
     trace = get_trace(video, cfg, cache_dir=tmp_path / "cache", detector=detector, pose=pose)
     report = analyze_trace(trace, cfg)
     assert render_highlights(video, trace, report, build_ghost(report, cfg.ghost)) is None
+
+
+def test_first_and_last_strokes_are_not_picked_as_best_or_worst():
+    from wodvision.viz.rowing_highlights import select_best_worst
+
+    # Premier coup (depart arrete) le plus eloigne de la reference, dernier le plus proche.
+    assert select_best_worst([0.9, 0.3, 0.2, 0.4, 0.3, 0.1]) == (2, 3)
+    # Avec trop peu de coups, on ne retire rien.
+    assert select_best_worst([0.9, 0.3, 0.1]) == (2, 0)
+    assert select_best_worst([0.9, 0.3]) is None
+    assert select_best_worst([float("nan")] * 6) is None

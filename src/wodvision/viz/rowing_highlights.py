@@ -151,6 +151,20 @@ def _clip(video, trace, report, ghost, stroke, title: str) -> bytes:
         return path.read_bytes()
 
 
+def select_best_worst(deviations: list[float]) -> tuple[int, int] | None:
+    """Indices du meilleur coup et du coup a ameliorer (plus petit / plus grand ecart au fantome).
+
+    Le premier coup part de l'arret et le dernier est souvent tronque : avec au moins cinq
+    coups on les exclut du choix, sinon le "pire coup" serait presque toujours le premier.
+    """
+    valid = [i for i, d in enumerate(deviations) if np.isfinite(d)]
+    if len(valid) >= MIN_STROKES + 2:
+        valid = [i for i in valid if i not in (0, len(deviations) - 1)]
+    if len(valid) < MIN_STROKES:
+        return None
+    return min(valid, key=lambda i: deviations[i]), max(valid, key=lambda i: deviations[i])
+
+
 def render_highlights(
     video: str | Path, trace: RowingTrace, report: RowingReport, ghost: GhostModel | None
 ) -> Highlights | None:
@@ -161,11 +175,10 @@ def render_highlights(
     if ghost is None or len(report.stroke_events) < MIN_STROKES:
         return None
     dev = stroke_deviations(report, ghost)
-    valid = [i for i, d in enumerate(dev) if np.isfinite(d)]
-    if len(valid) < MIN_STROKES:
+    picked = select_best_worst(dev)
+    if picked is None:
         return None
-    best = min(valid, key=lambda i: dev[i])
-    worst = max(valid, key=lambda i: dev[i])
+    best, worst = picked
     out = Highlights()
     similar = dev[worst] - dev[best] < SIMILAR_GAP
     for key, idx, title in (("best", best, "Ton meilleur coup"),

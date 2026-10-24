@@ -109,10 +109,11 @@ def summarize(report, content: CoachingContent, max_priorities: int = 2) -> Coac
     """Synthese pedagogique d'un rapport."""
     criteria = [_criterion_status(k, c, report) for k, c in content.criteria.items()]
     code_to_criterion = {code: k for k, c in content.criteria.items() for code in c.codes}
+    not_evaluable = {c.key for c in criteria if c.status == "na"}
 
     ranked = []
     for f in report.findings:
-        if f.code not in content.tips:
+        if f.code not in content.tips or code_to_criterion.get(f.code) in not_evaluable:
             continue
         severity = f.n_flagged / max(f.n_valid, 1)
         weight = content.weights.get(f.code, 1.0)

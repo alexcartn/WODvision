@@ -91,3 +91,14 @@ def test_endurance_is_not_judged_on_a_short_video():
     endurance = next(c for c in s.criteria if c.key == "endurance")
     assert endurance.status == "na" and "trop courte" in endurance.note
     assert "Ta technique tient bien" not in " ".join(s.strengths)
+
+
+def test_a_criterion_that_cannot_be_evaluated_produces_no_priority():
+    """Derive de buste sur une video trop courte pour juger la fatigue : ni pastille ni priorite."""
+    t, xy, score, _ = generate_rower(RowerParams(noise_px=0.0, duration_s=30.0,
+                                                 fatigue_drift_deg=25.0))
+    report = analyze_keypoints(t, xy, score, Config())
+    assert any(f.code == "trunk_drift" for f in report.findings)  # le constat brut existe
+    s = summarize(report, CONTENT, max_priorities=5)
+    assert status(s, "endurance") == "na"
+    assert "trunk_drift" not in [p.code for p in s.priorities]
