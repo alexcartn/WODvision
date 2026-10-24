@@ -28,6 +28,7 @@ class Criterion(BaseModel):
     codes: list[str]
     available_in: list[str]
     needs_pm5: bool = False
+    min_duration_s: float = 0.0  # en dessous, le critere n'est pas evaluable (ex. la fatigue)
 
 
 class Tip(BaseModel):
@@ -85,6 +86,11 @@ def _criterion_status(key: str, crit: Criterion, report) -> CriterionStatus:
         why = {"full": "", "degraded": "vue oblique", "minimal": "vue de face ou de dos"}
         return CriterionStatus(key, crit.label, "na",
                                f"Non mesuré avec cette vue ({why.get(report.mode, '')}).")
+    duration = float(report.series.t_s[-1] - report.series.t_s[0]) if report.series else 0.0
+    if duration < crit.min_duration_s:
+        return CriterionStatus(key, crit.label, "na",
+                               f"Vidéo trop courte pour en juger (moins de "
+                               f"{crit.min_duration_s:.0f} s).")
     if crit.needs_pm5 and not (report.pm5 is not None and report.pm5.n_matched > 0
                                and report.pm5.features):
         return CriterionStatus(key, crit.label, "na", "Pas de données PM5 avec courbe de force.")

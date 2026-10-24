@@ -9,7 +9,11 @@ import numpy as np
 
 from wodvision.analysis.angles import pick_visible_side
 from wodvision.analysis.rowing.frame import MachineFrame, estimate_rail_axis
-from wodvision.analysis.rowing.metrics import StrokeMetrics, compute_stroke_metrics
+from wodvision.analysis.rowing.metrics import (
+    StrokeMetrics,
+    compute_stroke_metrics,
+    knee_angle_series,
+)
 from wodvision.analysis.rowing.rules import (
     INDICATIVE_CODES,
     TIMING_CODES,
@@ -123,6 +127,7 @@ def analyze_keypoints(
     signal_used, strokes, sign = detect_strokes_multi(
         series.t_s, signals, r.stroke_prominence_fraction, r.min_stroke_period_s,
         r.min_stroke_rate_spm, r.max_stroke_rate_spm,
+        knee_angle=knee_angle_series(series), min_knee_diff_deg=r.min_knee_orientation_diff_deg,
     )
     if sign == -1:
         frame = frame.flipped()

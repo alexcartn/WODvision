@@ -167,7 +167,7 @@ def test_falls_back_to_hip_when_wrist_is_unusable():
     p = RowerParams()
     t, xy, score, _ = generate_rower(p)
     rng = np.random.default_rng(0)
-    xy[:, 9] += rng.normal(0, 60.0, (len(t), 2))
+    xy[:, 9] += rng.normal(0, 400.0, (len(t), 2))  # poignet detruit : bien au-dela du filtrage
     report = analyze_keypoints(t, xy, score, Config())
     assert report.signal_used in ("hip", "shoulder")
     assert report.n_strokes >= 5
@@ -203,3 +203,16 @@ def test_rhythm_cv_flags_irregular_periods():
     assert finding is None and cv < 1
     cv, finding = rhythm_cv(make([1.5, 3.0, 1.8, 3.2, 1.6, 3.0]), RowingConfig())
     assert finding is not None and cv > 12
+
+
+@pytest.mark.parametrize("drive_fraction", [0.45, 0.5, 0.55, 0.6])
+def test_catch_and_finish_are_not_swapped_when_drive_and_recovery_last_the_same(drive_fraction):
+    """Rythme rapide : drive et recuperation de duree voisine. Le sens est donne par le genou
+    (fléchi au catch, tendu au finish), pas par la comparaison des durees."""
+    report, _, _ = run(drive_fraction=drive_fraction, rate_spm=32.0, duration_s=40.0)
+    assert report.n_strokes >= 8
+    for s in report.strokes:
+        assert s.knee_angle_catch < s.knee_angle_finish - 60.0
+        assert s.hip_angle_catch < s.hip_angle_finish
+    assert report.recovery_drive_ratio == pytest.approx((1 - drive_fraction) / drive_fraction,
+                                                        abs=0.25)

@@ -64,6 +64,12 @@ def _angle(a: np.ndarray, b: np.ndarray, c: np.ndarray) -> np.ndarray:
     return np.degrees(np.arccos(np.clip(cos, -1.0, 1.0)))
 
 
+def knee_angle_series(series: RowSeries) -> np.ndarray:
+    """Angle du genou (hanche-genou-cheville, degres) sur la grille des series filtrees."""
+    p = series.pts
+    return _angle(p["hip"], p["knee"], p["ankle"])
+
+
 def _fraction(x: np.ndarray, x0: float, x1: float, min_range: float) -> np.ndarray | None:
     """Progression normalisee (0 -> 1) de x entre x0 et x1, None si l'excursion est trop faible."""
     if not np.isfinite(x0) or not np.isfinite(x1) or abs(x1 - x0) < min_range:

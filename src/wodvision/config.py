@@ -62,6 +62,7 @@ class RowingConfig(BaseModel):
     bbox_from_pose_margin: float = 0.25  # marge autour des keypoints pour la bbox deduite
     cutoff_hz: float = 6.0
     stroke_prominence_fraction: float = 0.35  # fraction de l'amplitude du signal poignee
+    min_knee_orientation_diff_deg: float = 25.0  # genou plus plie au catch qu'au finish d'au moins
     min_stroke_period_s: float = 1.2
     min_stroke_rate_spm: float = 10.0
     max_stroke_rate_spm: float = 50.0

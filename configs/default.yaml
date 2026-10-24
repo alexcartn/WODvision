@@ -43,6 +43,7 @@ rowing:
   bbox_from_pose_margin: 0.25
   cutoff_hz: 6.0
   stroke_prominence_fraction: 0.35
+  min_knee_orientation_diff_deg: 25.0
   min_stroke_period_s: 1.2
   min_stroke_rate_spm: 10.0
   max_stroke_rate_spm: 50.0

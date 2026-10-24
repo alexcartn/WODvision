@@ -73,8 +73,15 @@ def detect_strokes(
     min_period_s: float = 1.2,
     min_rate_spm: float = 10.0,
     max_rate_spm: float = 50.0,
+    knee_angle: np.ndarray | None = None,
+    min_knee_diff_deg: float = 25.0,
 ) -> tuple[list[Stroke], int]:
     """Detecte les coups complets (catch -> finish -> catch suivant).
+
+    Sens de l'axe : si `knee_angle` (meme grille que `t_s`, degres) est fourni, le sens
+    retenu est celui ou le genou est plus plie au catch qu'au finish d'au moins
+    `min_knee_diff_deg` (critere physique, valable meme quand drive et recuperation durent
+    pareil). A defaut, on retombe sur "le drive est plus court que la recuperation".
 
     Args:
         t_s: grille temporelle uniforme (s).
@@ -98,20 +105,33 @@ def detect_strokes(
     distance = max(1, int(round(min_period_s * fps)))
     prominence = prominence_fraction * amplitude
 
-    best: tuple[list[Stroke], int] | None = None
-    best_score = np.inf
+    candidates: dict[int, list[Stroke]] = {}
     for sign in (1, -1):
-        events = _alternating_extrema(t_s, sign * y, prominence, distance)
-        strokes = _strokes_from_events(events)
-        if not strokes:
-            continue
-        drive = np.median([s.drive_time for s in strokes])
-        recovery = np.median([s.recovery_time for s in strokes])
-        score = drive / recovery  # le bon sens a un drive plus court que la recuperation
-        if score < best_score:
-            best, best_score = (strokes, sign), score
-    if best is None:
+        strokes = _strokes_from_events(_alternating_extrema(t_s, sign * y, prominence, distance))
+        if strokes:
+            candidates[sign] = strokes
+    if not candidates:
         return [], 1
+
+    def knee_gap(strokes: list[Stroke]) -> float:
+        """Genou au finish - genou au catch (degres) : positif dans le bon sens."""
+        at = lambda ts: float(np.nanmedian([knee_angle[int(np.argmin(np.abs(t_s - t)))]  # noqa: E731
+                                            for t in ts]))
+        return at([s.t_finish for s in strokes]) - at([s.t_catch for s in strokes])
+
+    chosen = None
+    if knee_angle is not None:
+        gaps = {sg: knee_gap(st) for sg, st in candidates.items()}
+        sg = max(gaps, key=gaps.get)
+        if gaps[sg] >= min_knee_diff_deg:
+            chosen = (candidates[sg], sg)
+    if chosen is None:  # repli : le bon sens a un drive plus court que la recuperation
+        def duration_score(strokes: list[Stroke]) -> float:
+            return float(np.median([s.drive_time for s in strokes])
+                         / np.median([s.recovery_time for s in strokes]))
+        sg = min(candidates, key=lambda k: duration_score(candidates[k]))
+        chosen = (candidates[sg], sg)
+    best = chosen
 
     strokes, sign = best
     kept = [s for s in strokes if min_rate_spm <= s.rate_spm <= max_rate_spm]
@@ -133,6 +153,8 @@ def detect_strokes_multi(
     min_rate_spm: float = 10.0,
     max_rate_spm: float = 50.0,
     max_period_cv: float = 0.35,
+    knee_angle: np.ndarray | None = None,
+    min_knee_diff_deg: float = 25.0,
 ) -> tuple[str | None, list[Stroke], int]:
     """Essaie plusieurs signaux (poignet, hanche, epaule) et garde le plus regulier.
 
@@ -147,20 +169,29 @@ def detect_strokes_multi(
     results = []
     for name, y in signals.items():
         strokes, sign = detect_strokes(
-            t_s, y, prominence_fraction, min_period_s, min_rate_spm, max_rate_spm
+            t_s, y, prominence_fraction, min_period_s, min_rate_spm, max_rate_spm,
+            knee_angle, min_knee_diff_deg,
         )
         if len(strokes) >= 3 and _period_cv(strokes) <= max_period_cv:
             results.append((name, strokes, sign, _period_cv(strokes)))
     if not results:
         # Aucun signal regulier : renvoyer le meilleur nombre de coups, pour le diagnostic.
         best = max(
-            ((n, *detect_strokes(t_s, y, prominence_fraction, min_period_s,
-                                 min_rate_spm, max_rate_spm)) for n, y in signals.items()),
+            ((n, *detect_strokes(t_s, y, prominence_fraction, min_period_s, min_rate_spm,
+                                 max_rate_spm, knee_angle, min_knee_diff_deg))
+             for n, y in signals.items()),
             key=lambda r: len(r[1]),
         )
         return best[0], best[1], best[2]
-    most = max(len(r[1]) for r in results)
-    eligible = [r for r in results if len(r[1]) >= 0.8 * most]
+    # Coherence : un signal bruite compte des coups en trop ou en moins par rapport aux autres.
+    # On retient, dans l'ordre de priorite du dictionnaire (poignet d'abord, le plus proche du
+    # catch et du finish reels), le premier signal dont le nombre de coups est celui du consensus.
+    # La regularite de la periode ne departage pas : elle ne distingue pas un signal bruite d'un
+    # rythme irregulier, et un plateau (hanche) peut etre tres regulier mais imprecis.
+    consensus = float(np.median([len(r[1]) for r in results]))
+    tolerance = max(1.0, 0.1 * consensus)
+    agreeing = [r for r in results if abs(len(r[1]) - consensus) <= tolerance]
     order = list(signals)
-    name, strokes, sign, _ = min(eligible, key=lambda r: (round(r[3], 2), order.index(r[0])))
+    pool = agreeing or results
+    name, strokes, sign, _ = min(pool, key=lambda r: order.index(r[0]))
     return name, strokes, sign

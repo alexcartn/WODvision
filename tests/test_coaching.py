@@ -15,7 +15,7 @@ CONTENT = load_coaching(Path(__file__).resolve().parents[1] / "configs" / "conse
 
 
 def report_for(**kw):
-    t, xy, score, _ = generate_rower(RowerParams(noise_px=0.0, duration_s=40.0, **kw))
+    t, xy, score, _ = generate_rower(RowerParams(noise_px=0.0, duration_s=60.0, **kw))
     return analyze_keypoints(t, xy, score, Config())
 
 
@@ -60,7 +60,7 @@ def test_priorities_are_limited_and_diverse():
 
 
 def test_oblique_view_marks_positions_not_measured_and_findings_indicative():
-    t, xy, score, _ = generate_rower(RowerParams(yaw_deg=50.0, trunk_onset=0.05, duration_s=40.0))
+    t, xy, score, _ = generate_rower(RowerParams(yaw_deg=50.0, trunk_onset=0.05, duration_s=60.0))
     s = summarize(analyze_keypoints(t, xy, score, Config()), CONTENT)
     assert status(s, "positions") == "na"
     seq = next(c for c in s.criteria if c.key == "sequence")
@@ -83,3 +83,11 @@ def test_invalid_content_is_rejected(tmp_path):
     bad.write_text("criteria: {}\ntips: {x: {title: t}}\n")
     with pytest.raises(ValueError):
         load_coaching(bad)
+
+
+def test_endurance_is_not_judged_on_a_short_video():
+    t, xy, score, _ = generate_rower(RowerParams(noise_px=0.0, duration_s=22.0))
+    s = summarize(analyze_keypoints(t, xy, score, Config()), CONTENT)
+    endurance = next(c for c in s.criteria if c.key == "endurance")
+    assert endurance.status == "na" and "trop courte" in endurance.note
+    assert "Ta technique tient bien" not in " ".join(s.strengths)

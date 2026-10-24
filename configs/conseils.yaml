@@ -23,6 +23,7 @@ criteria:
   endurance:
     label: Tenue dans la durée
     available_in: [full, degraded]
+    min_duration_s: 45
     codes: [trunk_drift, travel_shortening]
     strength: "Ta technique tient bien quand la fatigue arrive."
   force:
