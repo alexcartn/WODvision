@@ -261,8 +261,27 @@ def _draw_athlete(image, kp, sc, trail, color: RGB):
     for i in range(17):
         if sc[i] > KP_THR:
             cv2.circle(image, tuple(int(v) for v in kp[i]), 4, (255, 255, 255), -1, cv2.LINE_AA)
-    for a, b in zip(trail[:-1], trail[1:], strict=False):
-        cv2.line(image, tuple(int(v) for v in a), tuple(int(v) for v in b), bgr, 2, cv2.LINE_AA)
+    _draw_trail(image, trail, bgr)
+
+
+def _draw_trail(image, trail, bgr) -> None:
+    """Sillage de la poignee : trace lissee, qui s'estompe vers le passe, plus un point."""
+    if len(trail) < 3:
+        return
+    pts = np.array(trail, dtype=float)
+    k = min(7, len(pts) | 1)  # moyenne mobile : le bruit de detection ne dessine plus de zigzag
+    kernel = np.ones(k) / k
+    pad = np.pad(pts, ((k // 2, k // 2), (0, 0)), mode="edge")
+    pts = np.stack([np.convolve(pad[:, d], kernel, mode="valid") for d in range(2)], axis=1)
+    layer = image.copy()
+    n = len(pts) - 1
+    for i in range(n):
+        thick = 1 + round(2 * (i + 1) / n)
+        cv2.line(layer, tuple(int(v) for v in pts[i]), tuple(int(v) for v in pts[i + 1]),
+                 bgr, thick, cv2.LINE_AA)
+    cv2.addWeighted(layer, 0.55, image, 0.45, 0, image)
+    cv2.circle(image, tuple(int(v) for v in pts[-1]), 5, (255, 255, 255), -1, cv2.LINE_AA)
+    cv2.circle(image, tuple(int(v) for v in pts[-1]), 5, bgr, 2, cv2.LINE_AA)
 
 
 def ghost_points_image(pose, report: RowingReport, to_ref: np.ndarray) -> dict:

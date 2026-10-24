@@ -33,6 +33,7 @@ from wodvision.rowing_pipeline import (
     get_trace,
     new_run_dir,
 )
+from wodvision.viz.rowing_curves import curves_png
 from wodvision.viz.rowing_dashboard import render_dashboard
 from wodvision.viz.rowing_diagram import default_phases_diagram
 from wodvision.viz.rowing_highlights import load_highlights, render_highlights
@@ -49,8 +50,8 @@ DEMOS = {
     "Vue oblique : mode dégradé": "oblique",
 }
 
-st.set_page_config(page_title="WODVision Rameur", layout="wide")
-st.title("WODVision : technique d'aviron sur Concept2")
+st.set_page_config(page_title="Pimp my row", layout="wide")
+st.title("Pimp my row : ta technique d'aviron sur Concept2")
 
 
 @st.cache_resource(show_spinner="Chargement des modeles de pose...")
@@ -227,6 +228,17 @@ def show_downloads(res: dict, level: str) -> None:
                                 "summary.json", "application/json")
 
 
+def show_curves(report) -> None:
+    """Courbes superposees de tous les coups (moyenne et ecart-type)."""
+    png = curves_png(report)
+    if png is None:
+        return
+    st.subheader("Ton geste, coup après coup")
+    st.caption("Trait gris : un coup. Courbe bleue : la moyenne. Bande : l'écart-type, donc ta "
+               "régularité. Fond bleu : poussée, fond orange : retour.")
+    st.image(png)
+
+
 def show_result(res: dict, level: str = "Débutant", simulated: bool = False) -> None:
     report: RowingReport = res["report"]
     coach = level == "Coach"
@@ -256,6 +268,7 @@ def show_result(res: dict, level: str = "Débutant", simulated: bool = False) ->
     if not coach:
         show_plan(summary)
     show_highlights(res)
+    show_curves(report)
 
     if coach:
         st.subheader("Mesures détaillées")

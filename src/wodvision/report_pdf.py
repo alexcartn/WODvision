@@ -39,6 +39,7 @@ from reportlab.platypus import (
 )
 
 from wodvision.coaching import CoachingContent, summarize
+from wodvision.viz.rowing_curves import curves_png
 from wodvision.viz.rowing_diagram import default_phases_diagram
 
 STATUS_COLOR = {"ok": "#2f8f5b", "warn": "#e08a1e", "bad": "#d64545", "na": "#9aa0ad"}
@@ -109,7 +110,7 @@ def _on_page(canvas, doc) -> None:
     canvas.saveState()
     canvas.setFont("DejaVu", 7.5)
     canvas.setFillColor(colors.HexColor(MUTED))
-    canvas.drawString(1.6 * cm, 1.0 * cm, "WODVision · fiche technique d'aviron · conseils "
+    canvas.drawString(1.6 * cm, 1.0 * cm, "Pimp my row · fiche technique d'aviron · conseils "
                       "indicatifs, à confirmer avec ton coach")
     canvas.drawRightString(A4[0] - 1.6 * cm, 1.0 * cm, f"Page {doc.page}")
     canvas.restoreState()
@@ -248,7 +249,7 @@ def build_fiche_pdf(
     buf = io.BytesIO()
     doc = BaseDocTemplate(buf, pagesize=A4, leftMargin=1.6 * cm, rightMargin=1.6 * cm,
                           topMargin=1.5 * cm, bottomMargin=1.7 * cm,
-                          title="Fiche technique d'aviron", author="WODVision")
+                          title="Fiche technique d'aviron", author="Pimp my row")
     frame = Frame(doc.leftMargin, doc.bottomMargin, doc.width, doc.height, id="f")
     doc.addPageTemplates([PageTemplate(id="p", frames=[frame], onPage=_on_page)])
 
@@ -279,6 +280,16 @@ def build_fiche_pdf(
                                _img(default_phases_diagram(), A4[0] - 3.2 * cm, 4.2 * cm)]))
     story.append(PageBreak())
     story += _highlights_section(highlights, s)
+    png = curves_png(report)
+    if png is not None:
+        story.append(KeepTogether([
+            Paragraph("Ton geste, coup après coup", s["h2"]),
+            _p(f"Chaque trait gris est un de tes {len(report.stroke_events)} coups, la courbe bleue "  # noqa: E501
+               "est la moyenne et la bande bleue l'écart-type : plus la bande est fine, plus tu "
+               "répètes le même geste. Fond bleu : la poussée. Fond orange : le retour.",
+               s["small"]),
+            Spacer(1, 3), _img(png, A4[0] - 3.2 * cm, 8.8 * cm)]))
+        story.append(Spacer(1, 6))
     story.append(Paragraph("Comment lire cette fiche", s["h2"]))
     for entry in content.glossary:
         story.append(Paragraph(f"<b>{escape(entry.term)}</b> : {escape(entry.text)}", s["small"]))

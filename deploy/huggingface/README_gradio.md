@@ -1,5 +1,5 @@
 ---
-title: WODVision Rameur
+title: Pimp my row
 emoji: 🚣
 colorFrom: blue
 colorTo: green
@@ -12,7 +12,7 @@ license: mit
 short_description: Analyse de la technique d'aviron sur Concept2 (video + PM5)
 ---
 
-# WODVision : technique d'aviron sur Concept2
+# Pimp my row : technique d'aviron sur Concept2
 
 Depose une video de profil d'un rameur sur ergometre Concept2 : cadence, ratio drive / recuperation,
 sequence jambes / dos / bras, alertes de technique, couplage optionnel avec les donnees du PM5.

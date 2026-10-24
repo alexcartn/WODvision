@@ -212,3 +212,7 @@ la courbe à la performance (seulement des consignes Concept2 et des avis de for
 - PLOS ONE 2023, foot-stretcher et cadence : https://pmc.ncbi.nlm.nih.gov/articles/PMC10174490/
 - BJSM 2021, lombalgie et biomécanique : https://bjsm.bmj.com/content/55/11/616
 - Kleshnev, récupération : https://www.row2k.com/features/5722/the-biomechanics-of-the-recovery-phase-by-dr-valery-kleshnev/
+
+## Fiche PDF et courbes de cycle
+
+La fiche PDF (`wodvision row-analyze` écrit `fiche.pdf` et `fiche_coach.pdf`) contient : pastilles par critère, chiffres clés avec le repère de ratio pour la cadence, priorités, schéma des quatre phases, images clés, et les courbes de cycle. Chaque coup est ramené à un axe de phase commun (0 catch, 1 finish, 2 catch suivant) : avance de la poignée le long du rail, hauteur de la poignée, angle du genou, inclinaison du buste. Traits gris = coups individuels, courbe = moyenne, bande = écart-type (régularité). Moins de 3 coups : pas de courbes. Dans la vidéo, le sillage de la poignée est lissé et estompé.

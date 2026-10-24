@@ -64,3 +64,15 @@ def test_oblique_sheet_says_what_is_not_measured(tmp_path):
 def test_clean_stroke_sheet_has_no_priority_but_still_builds():
     pdf = build_fiche_pdf(make_report(), CONTENT, None, "Débutant")
     assert pdf.startswith(b"%PDF")
+
+
+def test_curves_figure_needs_enough_strokes_and_is_included_in_the_sheet():
+    from wodvision.viz.rowing_curves import curves_png
+
+    report = make_report()
+    png = curves_png(report)
+    assert png is not None and png.startswith(b"\x89PNG")
+    short = analyze_keypoints(*generate_rower(RowerParams(noise_px=0.0, duration_s=5.0))[:3],
+                              Config())
+    assert curves_png(short) is None
+    assert len(build_fiche_pdf(report, CONTENT, None, "Débutant")) > 0

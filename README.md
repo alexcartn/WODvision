@@ -1,4 +1,4 @@
-# WODVision
+# Pimp my row (WODVision)
 
 Analyse video de mouvements CrossFit : squelette, trajectoire de barre,
 comptage de reps, metriques par rep. Voir `CLAUDE.md` pour les specifications
