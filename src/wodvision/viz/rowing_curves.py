@@ -136,7 +136,7 @@ def curves_png(report, ghost=None, dpi: int = 170) -> bytes | None:
         ax.axvspan(0, 1, color=DRIVE_BG, lw=0)
         ax.axvspan(1, 2, color=RECOVERY_BG, lw=0)
         _band(ax, PHASE_X, cycle_curves(report, meas[key])[keep])
-        if key in ref:
+        if key in ref and key != "handle_v":  # pas de reference sourcee pour la vitesse
             ax.plot(PHASE_X, ref[key], color=GHOST, lw=1.6, ls="--")
         ax.set_title(title, fontsize=8.5, loc="left")
         ax.set_ylabel(unit, fontsize=7)
