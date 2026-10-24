@@ -64,6 +64,8 @@ def _styles() -> dict[str, ParagraphStyle]:
                           textColor=colors.HexColor(INK))
     return {
         "base": base,
+        "brand": ParagraphStyle("brand", parent=base, fontName="DejaVu-Bold", fontSize=26,
+                                leading=30, textColor=colors.HexColor("#e5602b")),
         "title": ParagraphStyle("title", parent=base, fontName="DejaVu-Bold", fontSize=21,
                                 leading=25),
         "sub": ParagraphStyle("sub", parent=base, textColor=colors.HexColor(MUTED), fontSize=9),
@@ -239,6 +241,7 @@ def build_fiche_pdf(
     highlights=None,
     level: str = "Débutant",
     source_name: str = "",
+    athlete: str = "",
 ) -> bytes:
     """Fiche PDF (octets) pour une analyse. `level` : "Débutant" ou "Coach"."""
     _register_fonts()
@@ -255,7 +258,9 @@ def build_fiche_pdf(
 
     sub = f"{dt.date.today():%d/%m/%Y} · {report.mode_label}" + (f" · {source_name}"
                                                                 if source_name else "")
-    story = [Paragraph("Ta fiche technique d'aviron", s["title"]), Spacer(1, 2),
+    heading = f"Fiche technique d'aviron de {athlete}" if athlete else "Ta fiche technique d'aviron"
+    story = [Paragraph("PIMP MY ROW", s["brand"]), Paragraph(escape(heading), s["title"]),
+             Spacer(1, 2),
              _p(sub, s["sub"]), Spacer(1, 8),
              Paragraph("En un coup d'œil", s["h2"]), _criteria_table(summary, s), Spacer(1, 6),
              _numbers_table(report, s), Spacer(1, 6)]
@@ -290,14 +295,6 @@ def build_fiche_pdf(
                s["small"]),
             Spacer(1, 3), _img(png, A4[0] - 3.2 * cm, 8.8 * cm)]))
         story.append(Spacer(1, 6))
-    story.append(Paragraph("Comment lire cette fiche", s["h2"]))
-    for entry in content.glossary:
-        story.append(Paragraph(f"<b>{escape(entry.term)}</b> : {escape(entry.text)}", s["small"]))
-        story.append(Spacer(1, 2))
-    if content.filming:
-        story.append(Paragraph("Pour bien filmer ton prochain coup", s["h2"]))
-        for tip in content.filming:
-            story.append(Paragraph(f"• {escape(tip)}", s["small"]))
     if coach:
         story += _coach_appendix(report, s)
     doc.build(story)

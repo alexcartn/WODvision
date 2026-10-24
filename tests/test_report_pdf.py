@@ -48,7 +48,7 @@ def test_sheet_contains_the_summary_the_tips_and_accents(tmp_path):
     out = text(build_fiche_pdf(report, CONTENT, None, "Débutant", "ma_video.mp4"), tmp_path)
     for expected in ("Ta fiche technique d'aviron", "En un coup d'œil", "Enchaînement",
                      "À corriger", "Priorité 1", "Exercice", "Ce que tu dois sentir",
-                     "Les quatre phases du coup", "Comment lire cette fiche",
+                     "Les quatre phases du coup", "PIMP MY ROW",
                      "Pour bien filmer", "ma_video.mp4"):
         assert expected in out, expected
 

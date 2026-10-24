@@ -314,7 +314,7 @@ def _echo_coaching(report) -> None:
         typer.echo(f"  exercice : {p.tip.drill}")
 
 
-def _write_fiches(report, highlights, out, source_name: str) -> None:
+def _write_fiches(report, highlights, out, source_name: str, athlete: str = "") -> None:
     """Fiches PDF recapitulatives : fiche.pdf (debutant) et fiche_coach.pdf."""
     from wodvision.coaching import load_coaching
     from wodvision.report_pdf import build_fiche_pdf
@@ -324,7 +324,8 @@ def _write_fiches(report, highlights, out, source_name: str) -> None:
         return
     content = load_coaching(path)
     for level, name in (("Débutant", "fiche.pdf"), ("Coach", "fiche_coach.pdf")):
-        (out / name).write_bytes(build_fiche_pdf(report, content, highlights, level, source_name))
+        (out / name).write_bytes(build_fiche_pdf(report, content, highlights, level, source_name,
+                                                         athlete))
     typer.echo(f"fiches PDF : {out / 'fiche.pdf'} et fiche_coach.pdf")
 
 
@@ -387,6 +388,7 @@ def pm5_info(path: str) -> None:
 def row_analyze(
     path: str,
     mode: str = typer.Option("balanced", help="lightweight | balanced | performance"),
+    athlete: str = typer.Option("", "--athlete", help="Prenom affiche sur la fiche PDF."),
     click_x: float = typer.Option(None, "--click-x", help="X approx. du rameur (px, 1ere frame)."),
     click_y: float = typer.Option(None, "--click-y", help="Y approx. du rameur (px, 1ere frame)."),
     start_s: float = typer.Option(0.0, "--start", help="Debut de la fenetre analysee (s)."),
@@ -466,7 +468,7 @@ def row_analyze(
                     typer.echo(f"images cles et ralentis : {out / 'highlights'}")
             except Exception as exc:  # bonus : ne bloque pas l'analyse
                 typer.echo(f"images cles non generees ({exc})")
-    _write_fiches(report, hl, out, Path(path).name)
+    _write_fiches(report, hl, out, Path(path).name, athlete)
     typer.echo(f"sorties : {out}")
 
 
