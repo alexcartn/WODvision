@@ -315,7 +315,7 @@ def _echo_coaching(report) -> None:
 
 
 def _write_fiches(report, highlights, out, source_name: str, athlete: str = "") -> None:
-    """Fiches PDF recapitulatives : fiche.pdf (debutant) et fiche_coach.pdf."""
+    """Fiche PDF recapitulative (version coach) : fiche.pdf."""
     from wodvision.coaching import load_coaching
     from wodvision.report_pdf import build_fiche_pdf
 
@@ -323,10 +323,9 @@ def _write_fiches(report, highlights, out, source_name: str, athlete: str = "") 
     if not path.exists():
         return
     content = load_coaching(path)
-    for level, name in (("Débutant", "fiche.pdf"), ("Coach", "fiche_coach.pdf")):
-        (out / name).write_bytes(build_fiche_pdf(report, content, highlights, level, source_name,
-                                                         athlete))
-    typer.echo(f"fiches PDF : {out / 'fiche.pdf'} et fiche_coach.pdf")
+    (out / "fiche.pdf").write_bytes(
+        build_fiche_pdf(report, content, highlights, "Coach", source_name, athlete))
+    typer.echo(f"fiche PDF : {out / 'fiche.pdf'}")
 
 
 def _echo_pm5(p) -> None:

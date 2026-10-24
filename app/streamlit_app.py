@@ -95,13 +95,9 @@ def coaching_content():
 
 
 def attach_pdfs(result: dict, source_name: str) -> None:
-    """Fiches PDF (Débutant et Coach) construites une fois l'analyse terminée."""
-    content = coaching_content()
-    result["pdf"] = {
-        level: build_fiche_pdf(result["report"], content, result.get("highlights"), level,
-                               source_name)
-        for level in ("Débutant", "Coach")
-    }
+    """Fiche PDF (version coach) construite une fois l'analyse terminée."""
+    result["pdf"] = build_fiche_pdf(result["report"], coaching_content(),
+                                    result.get("highlights"), "Coach", source_name)
 
 
 def show_mode_banner(report: RowingReport, level: str) -> None:
@@ -216,10 +212,10 @@ def show_downloads(res: dict, level: str) -> None:
     coach = level == "Coach"
     st.subheader("Garder une trace")
     cols = st.columns(4 if coach else 2)
-    pdf = res.get("pdf", {}).get(level)
+    pdf = res.get("pdf")
     if pdf:
         cols[0].download_button("Télécharger la fiche PDF", pdf,
-                                f"fiche_aviron_{level.lower()}.pdf", "application/pdf",
+                                "fiche_aviron.pdf", "application/pdf",
                                 type="primary")
     cols[1].download_button("Vidéo annotée (mp4)", res["dash"], "dashboard.mp4", "video/mp4")
     if coach:
