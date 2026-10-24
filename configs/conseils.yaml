@@ -98,7 +98,7 @@ tips:
     status: a_valider
   recovery_rushed:
     title: "Ton retour est trop rapide"
-    why: "Un retour trop court laisse peu de temps pour te placer et te fatigue plus vite. Repère courant : le retour dure environ deux fois la poussée à cadence tranquille, un peu moins quand la cadence monte."
+    why: "Un retour trop court laisse peu de temps pour te placer et te fatigue plus vite. Repère mesuré chez des rameuses de haut niveau sur Concept2 : le retour dure environ 1,4 fois la poussée vers 21 coups par minute, et un peu moins que la poussée vers 32."
     feeling: "Pousse vite, reviens lentement : un temps pour la poussée, deux pour le retour."
     drill: "3 minutes à 22 coups par minute en comptant « poussée, retour, retour »."
     status: a_valider

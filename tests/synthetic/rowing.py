@@ -29,9 +29,9 @@ class RowerParams:
     knee_break: float = 0.6  # fraction de la recuperation avant flexion des genoux
     shin_catch_deg: float = 0.0  # < 0 : tibia au-dela de la verticale
     chain_deg: float = 0.0  # pente de la poignee pendant le drive
-    handle_h0: float = 0.62
+    handle_h0: float = 0.60
     lean_catch_deg: float = -30.0
-    lean_finish_deg: float = 25.0
+    lean_finish_deg: float = 45.0
     fatigue_drift_deg: float = 0.0  # inclinaison supplementaire du buste au catch en fin de serie
     noise_px: float = 1.5
     roll_deg: float = 0.0  # roulis de camera (rotation de l'image)

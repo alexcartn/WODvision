@@ -43,7 +43,7 @@ def test_camera_roll_does_not_change_result(roll):
 
 def test_layback_matches_ground_truth():
     report, _, _ = run()
-    assert np.median([s.trunk_lean_finish for s in report.strokes]) == pytest.approx(25.0, abs=3.0)
+    assert np.median([s.trunk_lean_finish for s in report.strokes]) == pytest.approx(45.0, abs=3.0)
     assert np.median([s.trunk_lean_catch for s in report.strokes]) == pytest.approx(-30.0, abs=3.0)
 
 
@@ -73,7 +73,7 @@ def test_detects_early_knee_break():
 
 
 def test_detects_layback_excess():
-    report, _, _ = run(lean_finish_deg=50.0)
+    report, _, _ = run(lean_finish_deg=62.0)
     assert "layback_excess" in codes(report)
 
 
@@ -136,7 +136,7 @@ def test_oblique_clean_stroke_has_no_findings():
 
 
 def test_oblique_masks_absolute_angle_findings():
-    report, _ = run_view(chain_deg=15.0, lean_finish_deg=50.0)
+    report, _ = run_view(chain_deg=15.0, lean_finish_deg=62.0)
     assert not codes(report) & {"chain_misaligned", "layback_excess", "shin_beyond_vertical"}
     assert report.n_masked_findings >= 1
 
@@ -148,7 +148,7 @@ def test_oblique_keeps_relative_findings_as_indicative():
 
 
 def test_oblique_keeps_timing_findings_as_reliable():
-    report, _ = run_view(rate_spm=24.0, drive_fraction=0.5)
+    report, _ = run_view(rate_spm=24.0, drive_fraction=0.6)
     rushed = [f for f in report.findings if f.code == "recovery_rushed"]
     assert rushed and rushed[0].reliability == "reliable"
 
@@ -222,15 +222,15 @@ def test_recovery_threshold_follows_the_stroke_rate():
     from wodvision.analysis.rowing.metrics import target_recovery_ratio
 
     table = Config().rowing.ratio_targets
-    assert target_recovery_ratio(18, table) == pytest.approx(2.0)
-    assert target_recovery_ratio(30, table) == pytest.approx(1.3)
-    assert target_recovery_ratio(36, table) == pytest.approx(1.0)
-    assert target_recovery_ratio(10, table) == pytest.approx(2.0)  # borne basse
-    assert target_recovery_ratio(50, table) == pytest.approx(1.0)  # borne haute
+    assert target_recovery_ratio(20.7, table) == pytest.approx(1.40)  # Kleshnev 2005
+    assert target_recovery_ratio(32.1, table) == pytest.approx(0.93)
+    assert 0.93 < target_recovery_ratio(26.0, table) < 1.40
+    assert target_recovery_ratio(10, table) == pytest.approx(1.40)  # borne basse
+    assert target_recovery_ratio(50, table) == pytest.approx(0.93)  # borne haute
 
 
 def test_same_ratio_is_a_fault_when_slow_but_fine_when_fast():
-    # Drive = recuperation (ratio 1,0) : trop court a 20 coups/min, normal a 36.
+    # Drive = recuperation (ratio 1,0) : trop court a 20 coups/min (repere 1,4), normal a 36.
     slow, _, _ = run(rate_spm=20.0, drive_fraction=0.5, duration_s=60.0)
     fast, _, _ = run(rate_spm=36.0, drive_fraction=0.5, duration_s=60.0)
     assert "recovery_rushed" in codes(slow)

@@ -138,6 +138,10 @@ def curves_png(report, ghost=None, dpi: int = 170) -> bytes | None:
         _band(ax, PHASE_X, cycle_curves(report, meas[key])[keep])
         if key in ref and key != "handle_v":  # pas de reference sourcee pour la vitesse
             ax.plot(PHASE_X, ref[key], color=GHOST, lw=1.6, ls="--")
+        if key == "handle_v":  # pic de vitesse de poignee sur Concept2 : 74 a 76 % du drive
+            ax.axvspan(0.74, 0.76, color=GHOST, alpha=0.5, lw=0)  # Kleshnev 2005
+            ax.text(0.73, 0.97, "pic typique", transform=ax.get_xaxis_transform(), ha="right",
+                    va="top", fontsize=6.5, color="#8a6d00")
         ax.set_title(title, fontsize=8.5, loc="left")
         ax.set_ylabel(unit, fontsize=7)
         ax.set_xticks([0, 1, 2], ["catch", "finish", "catch"], fontsize=7)
@@ -227,6 +231,9 @@ def force_png(report, dpi: int = 170) -> bytes | None:
     x = np.linspace(0, 1, N_PER_PHASE)
     ax.axvspan(0, 1, color=DRIVE_BG, lw=0)
     _band(ax, x, np.array(curves))
+    ax.axvspan(0.37, 0.41, color=GHOST, alpha=0.5, lw=0)  # pic de force sur Concept2 (Kleshnev)
+    ax.text(0.42, 0.97, "pic typique", transform=ax.get_xaxis_transform(), va="top",
+            fontsize=6.5, color="#8a6d00")
     ax.set_title("Courbe de force du PM5 (forme, normalisée par coup)", fontsize=8.5, loc="left")
     ax.set_xlabel("avancement de la poussée (catch → finish)", fontsize=7)
     ax.set_ylabel("force / pic", fontsize=7)

@@ -75,17 +75,17 @@ class RowingConfig(BaseModel):
     min_leg_fraction_at_trunk_onset: float = 0.4
     min_leg_fraction_at_arm_onset: float = 0.75
     max_shin_beyond_vertical_deg: float = 5.0
-    max_layback_deg: float = 35.0
-    min_layback_deg: float = 5.0
+    max_layback_deg: float = 55.0
+    min_layback_deg: float = 30.0
     min_handle_height_at_catch: float = -0.25  # en longueurs de tronc, vs genou
     max_handle_height_at_finish: float = 0.75  # 0 = hanche, 1 = epaule
     max_chain_angle_deg: float = 8.0
     max_knee_break_fraction: float = 0.25
-    # Repere recuperation / drive selon la cadence (coups/min -> ratio), interpole. Le ratio de 2
-    # (Concept2) vaut pour une cadence tranquille ; il diminue quand la cadence monte. Valeurs =
-    # reperes de coaching courants, a valider par un coach.
-    ratio_targets: list[list[float]] = [[18.0, 2.0], [24.0, 1.7], [28.0, 1.4], [32.0, 1.2],
-                                        [36.0, 1.0]]
+    # Repere recuperation / drive selon la cadence (coups/min -> ratio), interpole puis borne aux
+    # extremites. Mesures de Kleshnev (2005, Concept2, 5 rameuses de haut niveau) : rythme
+    # (drive / cycle) de 41,7 % a 20,7 c/min et 51,9 % a 32,1 c/min, soit des ratios de 1,40 et
+    # 0,93. Voir docs/references_ergometre.md.
+    ratio_targets: list[list[float]] = [[20.7, 1.40], [32.1, 0.93]]
     min_ratio_vs_target: float = 0.75  # faute si le ratio est sous 75 % du repere de la cadence
     max_trunk_drift_deg: float = 6.0  # derive de l'angle du tronc au catch (fatigue)
     max_view_shoulder_ratio: float = 0.5  # largeur d'epaules / tronc : au-dela, vue non profil
@@ -118,7 +118,7 @@ class GhostConfig(BaseModel):
 
     enabled: bool = True
     lean_catch_deg: float = -35.0  # buste penche en avant au catch (negatif = vers le volant)
-    lean_finish_deg: float = 25.0  # recul au finish (manuel Concept2)
+    lean_finish_deg: float = 45.0  # recul au finish (Penichet-Tomas 2025 : 44 a 49 deg)
     shin_catch_deg: float = 0.0  # tibias verticaux au catch
     leg_end: float = 0.7  # fraction du drive ou les jambes finissent leur extension
     trunk_onset: float = 0.45  # fraction du drive ou le dos demarre
@@ -126,7 +126,7 @@ class GhostConfig(BaseModel):
     arm_onset: float = 0.8  # fraction du drive ou les bras demarrent
     knee_break: float = 0.6  # fraction de la recuperation avant flexion des genoux
     leg_straight_fraction: float = 0.98  # jambes quasi tendues au finish
-    handle_finish_ratio: float = 0.6  # hauteur de poignee au finish : 0 = hanche, 1 = epaule
+    handle_finish_ratio: float = 0.7  # hauteur de poignee au finish : 0 = hanche, 1 = epaule
 
 
 class HostedConfig(BaseModel):

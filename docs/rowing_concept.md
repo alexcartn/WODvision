@@ -15,7 +15,7 @@ Les consignes Concept2 sont qualitatives : les seuils numériques ci-dessous son
   Les deux sources divergent : seuil configurable (`min_leg_fraction_at_trunk_onset`).
 - Catch : bras tendus, épaules basses, tibias verticaux sans dépasser la verticale, poignée à hauteur de genoux
   sans plonger.
-- Finish : jambes tendues, léger recul du buste (environ 25° derrière la verticale selon le manuel), poignée sous
+- Finish : jambes tendues, léger recul du buste (environ 45° derrière la verticale chez les rameuses d'élite sur Concept2, Penichet-Tomas 2025 ; le manuel parle de 25°), poignée sous
   les côtes, poignets plats. Angle de hanche au finish d'environ 100°.
 - Récupération : bras tendus, buste incliné, puis flexion des genoux une fois les mains passées au-dessus.
 - Rythme : récupération environ deux fois plus longue que le drive.
@@ -44,7 +44,7 @@ la valeur médiane et le seuil. Seuils dans `configs/default.yaml`, section `row
 | trunk_early | dos qui s'ouvre trop tôt | extension des jambes quand le dos démarre | < 0,4 |
 | arms_early | bras qui tirent trop tôt | extension des jambes quand les bras démarrent | < 0,75 |
 | shin_beyond_vertical | tibias au-delà de la verticale au catch | angle du tibia | < -5° |
-| layback_excess / layback_missing | recul du buste au finish | inclinaison du tronc | > 35° ou < 5° |
+| layback_excess / layback_missing | recul du buste au finish | inclinaison du tronc | > 55° ou < 30° (voir `docs/references_ergometre.md`) |
 | handle_drop | poignée qui plonge au catch | hauteur poignée vs genou (longueurs de tronc) | < -0,25 |
 | handle_high_finish | poignée trop haute au finish | 0 = hanche, 1 = épaule | > 0,75 |
 | chain_misaligned | chaîne non alignée avec le rail | pente de la poignée pendant le drive | > 8° |
@@ -59,9 +59,9 @@ Non détectable en vision 2D : dos arrondi (COCO-17 ne donne que la ligne épaul
 
 Le ratio de 2 pour 1 (Concept2) vaut à cadence tranquille ; Concept2 précise que plus la cadence monte, plus le drive
 doit s'accélérer pour que la récupération reste proportionnée. Le repère est donc interpolé selon la cadence de
-chaque coup : 18 coups/min : 2,0 ; 24 : 1,7 ; 28 : 1,4 ; 32 : 1,2 ; 36 : 1,0 (`rowing.ratio_targets`). Une faute
-est levée si le ratio mesuré est sous 75 % du repère. Ces valeurs sont des repères de coaching courants, non
-tirés d'une source chiffrée : à valider avec un coach.
+chaque coup : 1,40 à 20,7 coups/min et 0,93 à 32,1, interpolé et borné (`rowing.ratio_targets`), d'après les
+mesures de Kleshnev 2005 sur Concept2 (rythme de 41,7 % et 51,9 %). Une faute est levée si le ratio mesuré est sous
+75 % du repère. Source et limites : `docs/references_ergometre.md`.
 
 ## 3 bis. Modes d'analyse selon la vue
 
@@ -91,7 +91,7 @@ panneau du squelette seul, avec l'écart de buste en direct (degrés, + = plus d
   bras), ancré sur sa cheville et à sa hauteur d'assise, synchronisé sur sa phase de coup (progression du drive ou de
   la récupération, tirée des instants de catch et de finish détectés).
 - Séquence de référence : drive jambes, puis dos, puis bras ; récupération bras, buste, puis jambes. Tibias
-  verticaux au catch, jambes presque tendues et recul de 25° au finish (manuel Concept2), poignée à hauteur de
+  verticaux au catch, jambes presque tendues et recul de 45° au finish (Penichet-Tomas 2025), poignée à hauteur de
   genoux avec chaîne horizontale.
 - Paramètres dans `configs/default.yaml`, section `ghost` : hypothèses tirées des consignes Concept2, qui donnent
   la séquence et quelques repères mais pas un modèle numérique complet (par exemple l'inclinaison du buste au catch,

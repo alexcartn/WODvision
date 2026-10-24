@@ -231,8 +231,10 @@ def _coach_appendix(report, s) -> list:
                       f"{f.metric} médian = {f.median_value:.2f} (seuil {f.comparator} "
                       f"{f.threshold:g}), {f.n_flagged}/{f.n_valid} coups.", s["small"]))
     out += [Spacer(1, 6), _p(
-        "Les seuils sont des hypothèses de départ tirées des consignes Concept2 (voir "
-        "docs/rowing_concept.md) ; la posture de référence est un modèle, pas une norme.",
+        "Repères : ratio retour/poussée de Kleshnev 2005 (Concept2, 5 rameuses), angles de "
+        "genou et de buste de Penichet-Tomas et al. 2025 (13 rameuses d'élite), consignes Concept2 "
+        "pour le reste (docs/references_ergometre.md). Les autres seuils sont des hypothèses ; la "
+        "posture de référence est un modèle, pas une norme.",
         s["small"])]
     return out
 
@@ -303,7 +305,9 @@ def build_fiche_pdf(
             f"Chaque trait gris est un de tes {len(report.stroke_events)} coups, la courbe bleue "
             "est la moyenne et la bande l'écart-type : plus la bande est fine, plus tu répètes le "
             "même geste. Fond bleu : la poussée. Fond orange : le retour."
-            + (" Pointillé jaune : la posture de référence." if ghost is not None else ""),
+            + (" Pointillé jaune : la posture de référence." if ghost is not None else "")
+            + " Repère jaune sur la vitesse : position habituelle du pic (74 à 76 % de la "
+              "poussée sur Concept2, Kleshnev 2005).",
             s["small"]), Spacer(1, 3), _img(curves, full_width, 15.5 * cm)]
     force = force_png(report)
     if force is not None:

@@ -12,7 +12,7 @@ from wodvision.analysis.rowing.report import analyze_keypoints
 from wodvision.config import Config, GhostConfig
 
 # Parametres du rameur synthetique "propre" (tests/synthetic/rowing.py) pour comparer le modele.
-MATCHING = GhostConfig(lean_catch_deg=-30.0, lean_finish_deg=25.0, trunk_onset=0.5, trunk_end=0.9,
+MATCHING = GhostConfig(lean_catch_deg=-30.0, lean_finish_deg=45.0, trunk_onset=0.5, trunk_end=0.9,
                        arm_onset=0.8, knee_break=0.6, leg_end=0.7, shin_catch_deg=0.0)
 
 
@@ -86,7 +86,7 @@ def test_ghost_follows_the_reference_sequence():
     lean = lambda p: GhostModel.trunk_lean_deg(p)  # noqa: E731
     trunk_done = (lean(mid) - lean(catch)) / (lean(finish) - lean(catch))
     assert leg_done > 0.6 and trunk_done < 0.2
-    assert lean(finish) == pytest.approx(25.0, abs=0.5)
+    assert lean(finish) == pytest.approx(45.0, abs=0.5)
     assert lean(catch) == pytest.approx(-35.0, abs=0.5)
 
 

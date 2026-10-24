@@ -190,7 +190,11 @@ def detect_strokes_multi(
     # rythme irregulier, et un plateau (hanche) peut etre tres regulier mais imprecis.
     consensus = float(np.median([len(r[1]) for r in results]))
     tolerance = max(1.0, 0.1 * consensus)
-    agreeing = [r for r in results if abs(len(r[1]) - consensus) <= tolerance]
+    # Un signal dont la periode est bien plus irregulière que celle des autres compte des coups
+    # parasites (detection bruitee) : ecarte meme si son nombre de coups reste dans la tolerance.
+    best_cv = min(r[3] for r in results)
+    agreeing = [r for r in results if abs(len(r[1]) - consensus) <= tolerance
+                and r[3] <= max(0.05, 3.0 * best_cv)]
     order = list(signals)
     pool = agreeing or results
     name, strokes, sign, _ = min(pool, key=lambda r: order.index(r[0]))

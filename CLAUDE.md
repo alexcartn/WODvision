@@ -13,6 +13,7 @@ Le périmètre actif est désormais l'analyse de la technique d'aviron sur ergom
 - Mode fantôme : posture de référence (modèle Concept2 mis à l'échelle du rameur) superposée en vue de profil (`analysis/rowing/ghost.py`, `docs/rowing_concept.md` section 3 ter).
 - Nom du service : Pimp my row (références à l'émission Pimp my ride). Le paquet et la CLI gardent le nom `wodvision`.
 - Fiche PDF récapitulative : `report_pdf.py` (reportlab, BSD), `viz/rowing_curves.py` (courbes de poignée, genou, buste superposées coup par coup, moyenne et écart-type), schéma des phases `viz/rowing_diagram.py` ; CLI écrit `fiche.pdf` et `fiche_coach.pdf`. Ratio récupération/drive dépendant de la cadence (`rowing.ratio_targets`, hypothèses à valider).
+- Références ergomètre lues et intégrées (ratio selon la cadence, recul du buste, pic de vitesse) : `docs/references_ergometre.md`.
 - Version en ligne gratuite : profil `configs/hosted.yaml`, démo instantanée, Space Hugging Face (`docs/deploiement_huggingface.md`).
 - Règles de technique : explicites, chacune cite métrique, valeur et seuil ; seuils dans `configs/default.yaml` section `rowing`, hypothèses à calibrer (voir `docs/rowing_concept.md`).
 - Couplage PM5 : `pm5/` (parseurs BLE d'après la spec Concept2, session, enregistreur `bleak` optionnel, extra `pm5`), `analysis/rowing/pm5_sync.py` (appariement des coups, décalage d'horloge, validation) et `force_curve.py` ; CLI `pm5-record`, `pm5-info`, `row-analyze --pm5`. Dispositions d'octets testées par aller-retour, pas encore vérifiées sur un vrai PM5.
