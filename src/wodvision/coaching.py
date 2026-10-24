@@ -39,10 +39,17 @@ class Tip(BaseModel):
     status: str = "a_valider"
 
 
+class GlossaryEntry(BaseModel):
+    term: str
+    text: str
+
+
 class CoachingContent(BaseModel):
     criteria: dict[str, Criterion]
     tips: dict[str, Tip]
     weights: dict[str, float] = {}
+    glossary: list[GlossaryEntry] = []
+    filming: list[str] = []
 
 
 def load_coaching(path: str | Path) -> CoachingContent:

@@ -31,8 +31,8 @@ if TYPE_CHECKING:
     from wodvision.analysis.rowing.pm5_sync import Pm5Analysis
 
 MODE_LABELS = {
-    "full": "Analyse complete (vue de profil)",
-    "degraded": "Analyse degradee (vue oblique)",
+    "full": "Analyse complète (vue de profil)",
+    "degraded": "Analyse dégradée (vue oblique)",
     "minimal": "Analyse minimale (vue de face ou de dos)",
 }
 
@@ -133,8 +133,8 @@ def analyze_keypoints(
         frame = frame.flipped()
     if len(strokes) < 3:
         warnings.append(
-            f"Seulement {len(strokes)} coup(s) complet(s) detecte(s) : analyse peu fiable. "
-            "Verifier la visibilite du rameur, la vue (profil) et la duree de la video."
+            f"Seulement {len(strokes)} coup(s) complet(s) détecté(s) : analyse peu fiable. "
+            "Vérifie que le rameur est bien visible, de profil, et que la vidéo est assez longue."
         )
 
     metrics = compute_stroke_metrics(series, frame, strokes, r) if strokes else []
@@ -160,22 +160,22 @@ def analyze_keypoints(
         findings = kept
         if mode == "degraded":
             warnings.append(
-                f"{MODE_LABELS[mode]} : la vue n'est pas un profil (largeur d'epaules / tronc = "
+                f"{MODE_LABELS[mode]} : la vue n'est pas un profil (largeur d'épaules / tronc = "
                 f"{ratio:.2f}, seuil {r.max_view_shoulder_ratio:g}). Les angles et hauteurs "
-                f"absolus sont deformes : {n_masked} constat(s) masque(s). Restent fiables : "
-                "cadence, ratio drive/recuperation, regularite. Restent indicatifs : sequence "
-                "jambes/dos/bras et evolution de l'amplitude. Pour une analyse complete : filmer "
-                "perpendiculairement au rail, camera a hauteur de hanche, rameur entier visible."
+                f"absolus sont déformés : {n_masked} constat(s) masqué(s). Restent fiables : "
+                "cadence, ratio drive/récupération, régularité. Restent indicatifs : séquence "
+                "jambes/dos/bras et évolution de l'amplitude. Pour une analyse complète : filmer "
+                "perpendiculairement au rail, caméra à hauteur de hanche, rameur entier visible."
             )
         else:
             warnings.append(
-                f"{MODE_LABELS[mode]} (largeur d'epaules / tronc = {ratio:.2f}, seuil "
+                f"{MODE_LABELS[mode]} (largeur d'épaules / tronc = {ratio:.2f}, seuil "
                 f"{r.view_frontal_ratio:g}) : seuls le comptage des coups, la cadence et le "
-                f"rythme sont exploitables ; {n_masked} constat(s) de technique masque(s). "
-                "Filmer de profil pour une analyse complete."
+                f"rythme sont exploitables ; {n_masked} constat(s) de technique masqué(s). "
+                "Filme de profil pour une analyse complète."
             )
     if series.missing.mean() > 0.2:
-        warnings.append("Plus de 20 % du signal est interpole (rameur peu visible).")
+        warnings.append("Plus de 20 % du signal est interpolé (rameur peu visible).")
 
     def med(attr: str) -> float:
         vals = [getattr(m, attr) for m in metrics]

@@ -314,6 +314,20 @@ def _echo_coaching(report) -> None:
         typer.echo(f"  exercice : {p.tip.drill}")
 
 
+def _write_fiches(report, highlights, out, source_name: str) -> None:
+    """Fiches PDF recapitulatives : fiche.pdf (debutant) et fiche_coach.pdf."""
+    from wodvision.coaching import load_coaching
+    from wodvision.report_pdf import build_fiche_pdf
+
+    path = Path(__file__).resolve().parents[2] / "configs" / "conseils.yaml"
+    if not path.exists():
+        return
+    content = load_coaching(path)
+    for level, name in (("Débutant", "fiche.pdf"), ("Coach", "fiche_coach.pdf")):
+        (out / name).write_bytes(build_fiche_pdf(report, content, highlights, level, source_name))
+    typer.echo(f"fiches PDF : {out / 'fiche.pdf'} et fiche_coach.pdf")
+
+
 def _echo_pm5(p) -> None:
     typer.echo("--- couplage PM5 ---")
     typer.echo(f"coups PM5      : {len(p.session.strokes)} (apparies : {p.n_matched})")
@@ -432,6 +446,7 @@ def row_analyze(
     _echo_coaching(report)
     if report.pm5 is not None:
         _echo_pm5(report.pm5)
+    hl = None
     if not no_video:
         from wodvision.analysis.rowing.ghost import build_ghost
 
@@ -451,6 +466,7 @@ def row_analyze(
                     typer.echo(f"images cles et ralentis : {out / 'highlights'}")
             except Exception as exc:  # bonus : ne bloque pas l'analyse
                 typer.echo(f"images cles non generees ({exc})")
+    _write_fiches(report, hl, out, Path(path).name)
     typer.echo(f"sorties : {out}")
 
 

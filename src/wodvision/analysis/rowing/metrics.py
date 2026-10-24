@@ -30,6 +30,8 @@ class StrokeMetrics:
     drive_time_s: float
     recovery_time_s: float
     recovery_drive_ratio: float
+    target_recovery_ratio: float = NAN  # repere de ratio pour la cadence de ce coup
+    recovery_ratio_vs_target: float = NAN  # ratio mesure / repere (1 = conforme)
     knee_angle_catch: float = NAN
     knee_angle_finish: float = NAN
     hip_angle_catch: float = NAN
@@ -62,6 +64,12 @@ def _angle(a: np.ndarray, b: np.ndarray, c: np.ndarray) -> np.ndarray:
     denom = np.linalg.norm(ba, axis=-1) * np.linalg.norm(bc, axis=-1)
     cos = np.einsum("...i,...i->...", ba, bc) / np.where(denom < 1e-9, np.nan, denom)
     return np.degrees(np.arccos(np.clip(cos, -1.0, 1.0)))
+
+
+def target_recovery_ratio(rate_spm: float, table: list[list[float]]) -> float:
+    """Repere recuperation / drive pour une cadence, par interpolation (borne aux extremites)."""
+    rates, ratios = zip(*sorted((float(r), float(v)) for r, v in table), strict=True)
+    return float(np.interp(rate_spm, rates, ratios))
 
 
 def knee_angle_series(series: RowSeries) -> np.ndarray:
@@ -113,6 +121,9 @@ def compute_stroke_metrics(
             drive_time_s=stroke.drive_time,
             recovery_time_s=stroke.recovery_time,
             recovery_drive_ratio=stroke.recovery_time / stroke.drive_time,
+            target_recovery_ratio=target_recovery_ratio(stroke.rate_spm, cfg.ratio_targets),
+            recovery_ratio_vs_target=(stroke.recovery_time / stroke.drive_time)
+            / target_recovery_ratio(stroke.rate_spm, cfg.ratio_targets),
             knee_angle_catch=float(knee_angle[ic]),
             knee_angle_finish=float(knee_angle[i_f]),
             hip_angle_catch=float(hip_angle[ic]),

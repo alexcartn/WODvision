@@ -49,11 +49,19 @@ la valeur médiane et le seuil. Seuils dans `configs/default.yaml`, section `row
 | handle_high_finish | poignée trop haute au finish | 0 = hanche, 1 = épaule | > 0,75 |
 | chain_misaligned | chaîne non alignée avec le rail | pente de la poignée pendant le drive | > 8° |
 | knee_break_early | genoux qui plient avant les mains | flexion déjà faite au passage des mains | > 0,25 |
-| recovery_rushed | récupération trop courte | ratio récup / drive | < 1,3 |
+| recovery_rushed | récupération trop courte pour la cadence | ratio récup / drive divisé par le repère de la cadence | < 0,75 |
 | trunk_drift | buste de plus en plus penché au catch | dérive dernier tiers - premier tiers | > 6° |
 
 Non détectable en vision 2D : dos arrondi (COCO-17 ne donne que la ligne épaule-hanche), asymétrie gauche/droite
 (vue de face nécessaire), poussée réelle des pieds (force : PM5).
+
+## 3 bis 0. Repère de ratio récupération / drive selon la cadence
+
+Le ratio de 2 pour 1 (Concept2) vaut à cadence tranquille ; Concept2 précise que plus la cadence monte, plus le drive
+doit s'accélérer pour que la récupération reste proportionnée. Le repère est donc interpolé selon la cadence de
+chaque coup : 18 coups/min : 2,0 ; 24 : 1,7 ; 28 : 1,4 ; 32 : 1,2 ; 36 : 1,0 (`rowing.ratio_targets`). Une faute
+est levée si le ratio mesuré est sous 75 % du repère. Ces valeurs sont des repères de coaching courants, non
+tirés d'une source chiffrée : à valider avec un coach.
 
 ## 3 bis. Modes d'analyse selon la vue
 

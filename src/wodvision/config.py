@@ -81,7 +81,12 @@ class RowingConfig(BaseModel):
     max_handle_height_at_finish: float = 0.75  # 0 = hanche, 1 = epaule
     max_chain_angle_deg: float = 8.0
     max_knee_break_fraction: float = 0.25
-    min_recovery_drive_ratio: float = 1.3
+    # Repere recuperation / drive selon la cadence (coups/min -> ratio), interpole. Le ratio de 2
+    # (Concept2) vaut pour une cadence tranquille ; il diminue quand la cadence monte. Valeurs =
+    # reperes de coaching courants, a valider par un coach.
+    ratio_targets: list[list[float]] = [[18.0, 2.0], [24.0, 1.7], [28.0, 1.4], [32.0, 1.2],
+                                        [36.0, 1.0]]
+    min_ratio_vs_target: float = 0.75  # faute si le ratio est sous 75 % du repere de la cadence
     max_trunk_drift_deg: float = 6.0  # derive de l'angle du tronc au catch (fatigue)
     max_view_shoulder_ratio: float = 0.5  # largeur d'epaules / tronc : au-dela, vue non profil
     view_frontal_ratio: float = 1.1  # au-dela : face ou dos, analyse minimale

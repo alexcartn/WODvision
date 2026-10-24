@@ -55,6 +55,12 @@ def _circle_point(c0: np.ndarray, r0: float, c1: np.ndarray, r1: float, upper: b
     return max(cands, key=lambda p: p[1]) if upper else min(cands, key=lambda p: p[1])
 
 
+def generic_anthropometry() -> Anthropometry:
+    """Proportions moyennes (m) pour dessiner un schema quand aucun rameur n'est mesure."""
+    return Anthropometry(thigh=0.45, shin=0.45, torso=0.50, upper_arm=0.30, forearm=0.30,
+                         ankle=np.array([0.0, 0.15]), seat_h=0.12)
+
+
 def estimate_anthropometry(series: RowSeries, frame: MachineFrame) -> Anthropometry | None:
     """Longueurs de segments (mediane) et ancrage de la cheville depuis les series filtrees."""
     p = series.pts

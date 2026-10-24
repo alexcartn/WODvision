@@ -98,7 +98,7 @@ tips:
     status: a_valider
   recovery_rushed:
     title: "Ton retour est trop rapide"
-    why: "Un retour trop court laisse peu de temps pour te placer et te fatigue plus vite. Repère courant : le retour dure environ deux fois la poussée."
+    why: "Un retour trop court laisse peu de temps pour te placer et te fatigue plus vite. Repère courant : le retour dure environ deux fois la poussée à cadence tranquille, un peu moins quand la cadence monte."
     feeling: "Pousse vite, reviens lentement : un temps pour la poussée, deux pour le retour."
     drill: "3 minutes à 22 coups par minute en comptant « poussée, retour, retour »."
     status: a_valider
@@ -132,3 +132,30 @@ tips:
     feeling: "Enchaîne les trois segments comme un seul mouvement fluide."
     drill: "Exercices avec pause puis coups complets, en cherchant une courbe de force lisse sur l'écran."
     status: a_valider
+
+# Glossaire et conseils de tournage affiches dans l'application et dans la fiche PDF.
+glossary:
+  - term: Catch
+    text: "Le début du coup : tu es groupé vers le volant, jambes fléchies, bras tendus, prêt à pousser."
+  - term: Drive (poussée)
+    text: "La partie active du coup : tu pousses avec les jambes, puis tu bascules le buste en arrière, puis tu tires avec les bras."
+  - term: Finish
+    text: "La fin de la poussée : jambes tendues, léger recul du buste, poignée sous les côtes."
+  - term: Récupération (retour)
+    text: "Tu reviens vers l'avant dans l'ordre inverse : bras, buste, puis jambes. C'est le moment de souffler."
+  - term: Cadence
+    text: "Le nombre de coups par minute."
+  - term: Ratio retour / poussée
+    text: "Combien de fois le retour dure plus longtemps que la poussée. Environ 2 à cadence tranquille ; la valeur recommandée baisse quand la cadence monte."
+  - term: Posture de référence (fantôme)
+    text: "Le squelette jaune : une posture type issue des consignes Concept2, adaptée à ta morphologie, à la même phase du coup que toi. C'est un guide, pas une norme absolue."
+  - term: Pastilles
+    text: "Vert : bien. Orange : à surveiller. Rouge : à corriger. Gris : non mesuré avec cette vidéo."
+
+filming:
+  - "Filme de profil : la caméra perpendiculaire au rail, à hauteur de hanche."
+  - "Pose le téléphone sur un support ou un trépied : ne le tiens pas à la main."
+  - "Le rameur doit être entier dans l'image, du volant jusqu'à la plateforme, y compris bras tendus au catch."
+  - "Une seule personne dans l'image, fond uni si possible, vêtements ajustés."
+  - "Filme au moins 30 secondes pour juger la technique, une minute ou plus pour juger la tenue dans la durée."
+  - "Pas de ralenti ni de zoom ; 30 images par seconde ou plus."

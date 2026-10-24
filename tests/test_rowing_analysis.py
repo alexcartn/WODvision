@@ -124,7 +124,7 @@ def test_oblique_view_is_degraded_but_counts_strokes():
     base, _, _ = run()
     report, _ = run_view()
     assert report.mode == "degraded"
-    assert any("degradee" in w for w in report.warnings)
+    assert any("dégradée" in w for w in report.warnings)
     assert report.n_strokes == base.n_strokes
     assert report.stroke_rate_spm == pytest.approx(24.0, abs=0.7)
     assert report.recovery_drive_ratio == pytest.approx(base.recovery_drive_ratio, abs=0.3)
@@ -148,7 +148,7 @@ def test_oblique_keeps_relative_findings_as_indicative():
 
 
 def test_oblique_keeps_timing_findings_as_reliable():
-    report, _ = run_view(rate_spm=36.0, drive_fraction=0.5)
+    report, _ = run_view(rate_spm=24.0, drive_fraction=0.5)
     rushed = [f for f in report.findings if f.code == "recovery_rushed"]
     assert rushed and rushed[0].reliability == "reliable"
 
@@ -216,3 +216,25 @@ def test_catch_and_finish_are_not_swapped_when_drive_and_recovery_last_the_same(
         assert s.hip_angle_catch < s.hip_angle_finish
     assert report.recovery_drive_ratio == pytest.approx((1 - drive_fraction) / drive_fraction,
                                                         abs=0.25)
+
+
+def test_recovery_threshold_follows_the_stroke_rate():
+    from wodvision.analysis.rowing.metrics import target_recovery_ratio
+
+    table = Config().rowing.ratio_targets
+    assert target_recovery_ratio(18, table) == pytest.approx(2.0)
+    assert target_recovery_ratio(30, table) == pytest.approx(1.3)
+    assert target_recovery_ratio(36, table) == pytest.approx(1.0)
+    assert target_recovery_ratio(10, table) == pytest.approx(2.0)  # borne basse
+    assert target_recovery_ratio(50, table) == pytest.approx(1.0)  # borne haute
+
+
+def test_same_ratio_is_a_fault_when_slow_but_fine_when_fast():
+    # Drive = recuperation (ratio 1,0) : trop court a 20 coups/min, normal a 36.
+    slow, _, _ = run(rate_spm=20.0, drive_fraction=0.5, duration_s=60.0)
+    fast, _, _ = run(rate_spm=36.0, drive_fraction=0.5, duration_s=60.0)
+    assert "recovery_rushed" in codes(slow)
+    assert "recovery_rushed" not in codes(fast)
+    # Ce qui compte c'est le ratio rapporte au repere de la cadence.
+    assert slow.strokes[2].recovery_ratio_vs_target < 0.75
+    assert fast.strokes[2].recovery_ratio_vs_target >= 0.75

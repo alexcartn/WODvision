@@ -25,6 +25,7 @@ from wodvision.analysis.rowing.report import MODE_LABELS, RowingReport
 from wodvision.coaching import load_coaching, summarize
 from wodvision.config import load_config
 from wodvision.io.cache import load_trace
+from wodvision.report_pdf import build_fiche_pdf
 from wodvision.rowing_pipeline import (
     analyze_trace,
     build_default_models,
@@ -33,6 +34,7 @@ from wodvision.rowing_pipeline import (
     new_run_dir,
 )
 from wodvision.viz.rowing_dashboard import render_dashboard
+from wodvision.viz.rowing_diagram import default_phases_diagram
 from wodvision.viz.rowing_highlights import load_highlights, render_highlights
 
 logging.basicConfig(level=logging.INFO)
@@ -70,6 +72,7 @@ def demo_result(name: str) -> dict:
     hl_dir = DEMO_DIR / f"{name}_highlights"
     if hl_dir.exists():
         result["highlights"] = load_highlights(hl_dir)
+    attach_pdfs(result, f"demo_{name}")
     return result
 
 
@@ -88,6 +91,16 @@ STATUS_WORD = {"ok": "Bien", "warn": "À surveiller", "bad": "À corriger", "na"
 @st.cache_resource
 def coaching_content():
     return load_coaching(ROOT / "configs" / "conseils.yaml")
+
+
+def attach_pdfs(result: dict, source_name: str) -> None:
+    """Fiches PDF (Débutant et Coach) construites une fois l'analyse terminée."""
+    content = coaching_content()
+    result["pdf"] = {
+        level: build_fiche_pdf(result["report"], content, result.get("highlights"), level,
+                               source_name)
+        for level in ("Débutant", "Coach")
+    }
 
 
 def show_mode_banner(report: RowingReport, level: str) -> None:
@@ -109,9 +122,9 @@ def show_mode_banner(report: RowingReport, level: str) -> None:
         )
 
 
-def show_summary(report: RowingReport, level: str) -> None:
-    summary = summarize(report, coaching_content(), max_priorities=2 if level == "Débutant" else 3)
-    st.subheader("Ce qu'il faut retenir")
+def show_overview(report: RowingReport, summary, level: str) -> None:
+    """Pastilles par critère (avec leur légende) et trois chiffres expliqués."""
+    st.subheader("En un coup d'œil")
     cols = st.columns(len(summary.criteria))
     for col, c in zip(cols, summary.criteria, strict=True):
         col.markdown(f"{c.emoji} {c.label}")
@@ -119,9 +132,23 @@ def show_summary(report: RowingReport, level: str) -> None:
                                              else ""))
         if level == "Coach":
             col.caption(c.note)
+    st.caption("🟢 Bien · 🟠 À surveiller · 🔴 À corriger · ⚪ Non mesuré avec cette vidéo")
+    target = float(np.nanmedian([m.target_recovery_ratio for m in report.strokes])) \
+        if report.strokes else float("nan")
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Coups analysés", report.n_strokes)
+    c2.metric("Cadence", f"{report.stroke_rate_spm:.0f} coups/min",
+              help="Le nombre de coups par minute.")
+    c3.metric("Retour / poussée", f"{report.recovery_drive_ratio:.1f} fois",
+              help=f"Combien de fois ton retour dure plus longtemps que ta poussée. Repère à ta "
+                   f"cadence : environ {target:.1f}.")
+
+
+def show_priorities(summary, level: str) -> None:
     if summary.strengths:
         st.success("Point fort : " + summary.strengths[0])
-    if not summary.priorities and not any(c.status in {"warn", "bad"} for c in summary.criteria):
+    st.subheader("Tes priorités")
+    if not summary.priorities:
         st.success("Rien à corriger en priorité avec les seuils actuels.")
     for i, p in enumerate(summary.priorities, 1):
         with st.container(border=True):
@@ -135,7 +162,29 @@ def show_summary(report: RowingReport, level: str) -> None:
                                             if p.tip.status == "a_valider" else ""))
     for note in summary.notes:
         st.caption(note)
-    st.caption("Conseils indicatifs, à confirmer avec ton coach.")
+
+
+def show_plan(summary) -> None:
+    """Les exercices des priorités, regroupés en un petit plan pour la prochaine séance."""
+    if not summary.priorities:
+        return
+    st.subheader("Ton plan pour la prochaine séance")
+    st.caption("Un échauffement tranquille, puis :")
+    for i, p in enumerate(summary.priorities, 1):
+        st.markdown(f"{i}. {p.tip.title} : {p.tip.drill}")
+    st.caption("Filme-toi de nouveau de profil après ces exercices pour comparer.")
+
+
+def show_learn(content) -> None:
+    """Pour comprendre les termes et bien filmer (replié par défaut)."""
+    with st.expander("Mieux comprendre : les phases du coup, le vocabulaire, bien filmer"):
+        st.image(default_phases_diagram(), caption="Les quatre phases du coup")
+        for entry in content.glossary:
+            st.markdown(f"{entry.term} : {entry.text}")
+        if content.filming:
+            st.markdown("Pour bien filmer ton prochain coup :")
+            for tip in content.filming:
+                st.markdown(f"- {tip}")
 
 
 def show_highlights(res: dict) -> None:
@@ -162,9 +211,27 @@ def show_highlights(res: dict) -> None:
             st.video(hl.clips[key])
 
 
+def show_downloads(res: dict, level: str) -> None:
+    coach = level == "Coach"
+    st.subheader("Garder une trace")
+    cols = st.columns(4 if coach else 2)
+    pdf = res.get("pdf", {}).get(level)
+    if pdf:
+        cols[0].download_button("Télécharger la fiche PDF", pdf,
+                                f"fiche_aviron_{level.lower()}.pdf", "application/pdf",
+                                type="primary")
+    cols[1].download_button("Vidéo annotée (mp4)", res["dash"], "dashboard.mp4", "video/mp4")
+    if coach:
+        cols[2].download_button("Coups (csv)", res["csv"], "strokes.csv", "text/csv")
+        cols[3].download_button("Résumé (json)", json.dumps(json.loads(res["json"]), indent=2),
+                                "summary.json", "application/json")
+
+
 def show_result(res: dict, level: str = "Débutant", simulated: bool = False) -> None:
     report: RowingReport = res["report"]
     coach = level == "Coach"
+    content = coaching_content()
+    summary = summarize(report, content, max_priorities=3 if coach else 2)
     if simulated:
         st.info("Données simulées (rameur filaire synthétique) : aucune personne réelle. "
                 "Le pipeline est le même que pour tes vidéos.")
@@ -174,28 +241,30 @@ def show_result(res: dict, level: str = "Débutant", simulated: bool = False) ->
         if coach or not w.startswith(mode_texts):  # le mode est deja explique plus haut
             st.warning(w)
 
-    show_summary(report, level)
-
-    st.subheader("La vidéo analysée")
+    st.subheader("Ta vidéo analysée")
     st.video(res["dash"])
     if res.get("ghost"):
-        st.caption("Mode fantôme : le squelette jaune est la posture de référence (modèle issu "
+        st.caption("Squelette vert : toi. Squelette jaune : la posture de référence (modèle issu "
                    "des consignes Concept2, hypothèses à calibrer), à la même phase du coup.")
     elif res.get("ghost_requested"):
         st.info("Mode fantôme indisponible : il faut une vue de profil (analyse complète).")
     if coach and report.camera_motion_px > 20:
         st.caption(f"Mouvement de caméra détecté (~{report.camera_motion_px:.0f} px) : compensé.")
 
+    show_overview(report, summary, level)
+    show_priorities(summary, level)
+    if not coach:
+        show_plan(summary)
     show_highlights(res)
 
     if coach:
+        st.subheader("Mesures détaillées")
         c1, c2, c3, c4, c5 = st.columns(5)
         c1.metric("Coups", report.n_strokes)
         c2.metric("Cadence médiane", f"{report.stroke_rate_spm:.1f} c/min")
         c3.metric("Durée du drive", f"{report.drive_time_s:.2f} s")
         c4.metric("Récup / drive", f"{report.recovery_drive_ratio:.2f} : 1")
         c5.metric("Régularité (CV)", f"{report.rate_cv_pct:.1f} %")
-
         st.subheader("Constats de technique (détail)")
         if not report.findings:
             st.success("Aucune faute détectée avec les seuils actuels.")
@@ -212,18 +281,9 @@ def show_result(res: dict, level: str = "Débutant", simulated: bool = False) ->
         df = pd.read_csv(io.BytesIO(res["csv"])).drop(columns=["force_curve"], errors="ignore")
         st.dataframe(df.round(2), width="stretch")
     else:
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Coups", report.n_strokes)
-        c2.metric("Cadence", f"{report.stroke_rate_spm:.0f} coups/min")
-        c3.metric("Retour / poussée", f"{report.recovery_drive_ratio:.1f} fois plus long",
-                  help="Repère courant : le retour dure environ deux fois la poussée.")
+        show_learn(content)
 
-    d1, d2, d3 = st.columns(3)
-    d1.download_button("Vidéo annotée (mp4)", res["dash"], "dashboard.mp4", "video/mp4")
-    if coach:
-        d2.download_button("Coups (csv)", res["csv"], "strokes.csv", "text/csv")
-        d3.download_button("Résumé (json)", json.dumps(json.loads(res["json"]), indent=2),
-                           "summary.json", "application/json")
+    show_downloads(res, level)
 
 
 def show_pm5(report: RowingReport) -> None:
@@ -373,6 +433,7 @@ def run_analysis(cfg, upload, pm5_upload, pm5_lag, mode, start_s, max_seconds, s
             except Exception:  # les images clés sont un bonus : l'analyse reste affichée
                 logging.getLogger(__name__).exception("images clés non générées")
         result["ghost"] = ghost_model is not None
+        attach_pdfs(result, Path(upload.name).name)
         result["ghost_requested"] = cfg.ghost.enabled
         st.session_state["result"] = result
     except ValueError as exc:

@@ -81,9 +81,11 @@ RULES: list[_Rule] = [
     _Rule("knee_break_early", "Genoux qui plient avant le passage des mains",
           "knee_break_fraction", ">", "max_knee_break_fraction",
           "A la recuperation : bras tendus, buste incline, puis seulement flexion des genoux."),
-    _Rule("recovery_rushed", "Recuperation trop courte par rapport au drive",
-          "recovery_drive_ratio", "<", "min_recovery_drive_ratio",
-          "Vise une recuperation environ deux fois plus longue que le drive."),
+    _Rule("recovery_rushed", "Recuperation trop courte pour la cadence",
+          "recovery_ratio_vs_target", "<", "min_ratio_vs_target",
+          "Allonge la recuperation : le repere est environ deux fois la duree du drive a cadence "
+          "tranquille, un peu moins quand la cadence monte (valeur mesuree / repere pour la "
+          "cadence)."),
 ]
 
 
