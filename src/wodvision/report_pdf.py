@@ -253,11 +253,11 @@ def build_fiche_pdf(
     coach = level == "Coach"
     summary = summarize(report, content, max_priorities=3 if coach else 2)
 
+    doc_title = "Pimp my row : fiche technique d'aviron" + (f" : {athlete}" if athlete else "")
     buf = io.BytesIO()
     doc = BaseDocTemplate(buf, pagesize=A4, leftMargin=1.6 * cm, rightMargin=1.6 * cm,
                           topMargin=1.5 * cm, bottomMargin=1.7 * cm,
-                          title="Pimp my row : fiche technique d'aviron" + (f" : {athlete}" if athlete
-                                                                   else ""),
+                          title=doc_title,
                           author="Pimp my row")
     frame = Frame(doc.leftMargin, doc.bottomMargin, doc.width, doc.height, id="f")
     doc.addPageTemplates([PageTemplate(id="p", frames=[frame], onPage=_on_page)])
