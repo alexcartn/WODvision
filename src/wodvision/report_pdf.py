@@ -256,13 +256,17 @@ def build_fiche_pdf(
     buf = io.BytesIO()
     doc = BaseDocTemplate(buf, pagesize=A4, leftMargin=1.6 * cm, rightMargin=1.6 * cm,
                           topMargin=1.5 * cm, bottomMargin=1.7 * cm,
-                          title="Fiche technique d'aviron", author="Pimp my row")
+                          title="Pimp my row : fiche technique d'aviron" + (f" : {athlete}" if athlete
+                                                                   else ""),
+                          author="Pimp my row")
     frame = Frame(doc.leftMargin, doc.bottomMargin, doc.width, doc.height, id="f")
     doc.addPageTemplates([PageTemplate(id="p", frames=[frame], onPage=_on_page)])
 
     sub = f"{dt.date.today():%d/%m/%Y} · {report.mode_label}" + (f" · {source_name}"
                                                                 if source_name else "")
-    heading = f"Fiche technique d'aviron de {athlete}" if athlete else "Ta fiche technique d'aviron"
+    de = "d'" if athlete[:1].lower() in "aeiouyhéèêâîô" else "de "
+    heading = (f"Fiche technique d'aviron {de}{athlete}" if athlete
+               else "Ta fiche technique d'aviron")
     story = [Paragraph("PIMP MY ROW", s["brand"]), Paragraph(escape(heading), s["title"]),
              Spacer(1, 2),
              _p(sub, s["sub"]), Spacer(1, 8),
